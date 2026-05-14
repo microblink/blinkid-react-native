@@ -1,7 +1,7 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 6.2.1 effective-5.10 (swiftlang-6.2.1.4.8 clang-1700.4.4.1)
+// swift-compiler-version: Apple Swift version 6.2.4 effective-5.10 (swiftlang-6.2.4.1.4 clang-1700.6.4.2)
 // swift-module-flags: -target arm64-apple-ios16.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-upcoming-feature ExistentialAny -enable-experimental-feature DebugDescriptionMacro -module-name BlinkIDUX -package-name blinkid_ios
-// swift-module-flags-ignorable:  -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.1
+// swift-module-flags-ignorable:  -formal-cxx-interoperability-mode=off -interface-compiler-version 6.2.4
 import AVFoundation
 import BlinkID
 import Combine
@@ -37,6 +37,14 @@ public actor BlinkIDEventStream : BlinkIDUX.EventStream {
 public protocol BlinkIDClassFilter {
   func classAllowed(classInfo: BlinkID.BlinkIDSDK.DocumentClassInfo) -> Swift.Bool
 }
+public enum ExtractionModule {
+  case barcodeOnly, documentWithBarcode, fullDocument
+  public static func == (a: BlinkIDUX.ExtractionModule, b: BlinkIDUX.ExtractionModule) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
 public actor BlinkIDAnalyzer : BlinkIDUX.CameraFrameAnalyzer {
   public typealias Event = BlinkIDUX.UIEvent
   public typealias Result = BlinkIDUX.ScanningResult<BlinkID.BlinkIDScanningResult, BlinkIDUX.BlinkIDScanningAlertType>
@@ -44,10 +52,16 @@ public actor BlinkIDAnalyzer : BlinkIDUX.CameraFrameAnalyzer {
   public var stepTimeoutDuration: Foundation.TimeInterval {
     get
   }
+  public var inactivityTimeoutDuration: Foundation.TimeInterval {
+    get
+  }
   #if compiler(>=5.3) && $NonescapableTypes
-  public init(sdk: BlinkID.BlinkIDSdk, blinkIdSessionSettings: BlinkID.BlinkIDSessionSettings = BlinkIDSessionSettings(inputImageSource: .video), eventStream: BlinkIDUX.BlinkIDEventStream, classFilter: (any BlinkIDUX.BlinkIDClassFilter)? = nil) async throws
+  public init(sdk: BlinkID.BlinkIDSdk, blinkIdSessionSettings: BlinkID.BlinkIDSessionSettings = BlinkIDSessionSettings(inputImageSource: .video), eventStream: BlinkIDUX.BlinkIDEventStream = BlinkIDEventStream(), classFilter: (any BlinkIDUX.BlinkIDClassFilter)? = nil, redactionSettingsResolver: (any BlinkID.RedactionSettingsResolver)? = nil) async throws
   #endif
   nonisolated public var sessionNumber: Swift.Int {
+    get
+  }
+  nonisolated public var extractionModule: BlinkIDUX.ExtractionModule {
     get
   }
   public func analyze(image: BlinkIDUX.BlinkIDAnalyzer.Frame) async
@@ -66,6 +80,16 @@ public actor BlinkIDAnalyzer : BlinkIDUX.CameraFrameAnalyzer {
     get
   }
 }
+public struct FrameProcessResultHandle : Swift.Sendable {
+  public let processResult: BlinkID.BlinkIDSDK.ProcessResult?
+  public let advanceToNextStep: @Sendable () async -> Swift.Void
+  public let getLastFrame: @Sendable () -> BlinkIDUX.LastFrameResult?
+  public let triggerStepTimeout: @Sendable () -> Swift.Void
+}
+public struct LastFrameResult : Swift.Sendable {
+  public let image: UIKit.UIImage?
+  public let orientation: BlinkID.CameraFrameVideoOrientation
+}
 public struct BlinkIDResultState {
   public let scanningResult: BlinkID.BlinkIDScanningResult?
 }
@@ -75,6 +99,7 @@ public enum BlinkIDScanningAlertType : Swift.Int, Swift.Sendable, BlinkIDUX.Aler
   }
   case timeout
   case disallowedClass
+  case unsupportedDocument
   public var title: Swift.String {
     get
   }
@@ -98,32 +123,25 @@ public enum BlinkIDScanningAlertType : Swift.Int, Swift.Sendable, BlinkIDUX.Aler
 }
 @_Concurrency.MainActor final public class BlinkIDUXModel : BlinkIDUX.ScanningViewModel<BlinkID.BlinkIDScanningResult, BlinkIDUX.UIEvent, BlinkIDUX.ReticleStateMachine, BlinkIDUX.BlinkIDScanningAlertType> {
   #if compiler(>=5.3) && $NonescapableTypes
-  @Combine.Published @_projectedValueProperty($result) @_Concurrency.MainActor final public var result: BlinkIDUX.BlinkIDResultState? {
-    get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
-    set
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
-    _modify
-  }
+  @_Concurrency.MainActor public init(analyzer: any BlinkIDUX.CameraFrameAnalyzer<BlinkID.CameraFrame, BlinkIDUX.UIEvent>, uxSettings: BlinkIDUX.ScanningUXSettings = ScanningUXSettings(), onScanCompleted: @escaping (BlinkIDUX.BlinkIDResultState) -> Swift.Void, onFrameProcessResult: (@Sendable (BlinkIDUX.FrameProcessResultHandle) async -> Swift.Void)? = nil)
   #endif
-  #if compiler(>=5.3) && $NonescapableTypes
-  @_Concurrency.MainActor final public var $result: Combine.Published<BlinkIDUX.BlinkIDResultState?>.Publisher {
-    get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
-    set
-  }
-  #endif
-  @_Concurrency.MainActor public init(analyzer: any BlinkIDUX.CameraFrameAnalyzer<BlinkID.CameraFrame, BlinkIDUX.UIEvent>, uxSettings: BlinkIDUX.ScanningUXSettings = ScanningUXSettings())
   @_Concurrency.MainActor override final public func processAnalyzerResult() async
   @_Concurrency.MainActor override final public func timeoutAlertDismised()
   @objc deinit
 }
 @_Concurrency.MainActor @preconcurrency public struct BlinkIDUXView : SwiftUICore.View {
+  @_Concurrency.MainActor @preconcurrency public init(analyzer: any BlinkIDUX.CameraFrameAnalyzer<BlinkID.CameraFrame, BlinkIDUX.UIEvent>, onScanCompleted: @escaping (BlinkIDUX.BlinkIDResultState) -> Swift.Void)
   @_Concurrency.MainActor @preconcurrency public init(viewModel: BlinkIDUX.BlinkIDUXModel)
   @_Concurrency.MainActor @preconcurrency public var body: some SwiftUICore.View {
     get
   }
   public typealias Body = @_opaqueReturnTypeOf("$s9BlinkIDUX0A8IDUXViewV4bodyQrvp", 0) __
+}
+extension SwiftUICore.View {
+  @_Concurrency.MainActor @preconcurrency public func uxSettings(_ settings: BlinkIDUX.ScanningUXSettings) -> some SwiftUICore.View
+  
+  @_Concurrency.MainActor @preconcurrency public func onFrameProcessResult(_ callback: @escaping @Sendable (BlinkIDUX.FrameProcessResultHandle) async -> Swift.Void) -> some SwiftUICore.View
+  
 }
 public enum DocumentSide : Swift.Sendable, Swift.Equatable {
   case front
@@ -147,15 +165,13 @@ public enum ReticleState : BlinkIDUX.ReticleStateProtocol {
   case front
   case back
   case barcode
+  case barcodeSide
   case detecting
   case flip
   case error(Swift.String)
   case inactive
   case passport(Swift.String)
   case inactiveWithMessage(Swift.String)
-  public static var initialState: BlinkIDUX.ReticleState {
-    get
-  }
   public static var inactiveState: BlinkIDUX.ReticleState {
     get
   }
@@ -203,8 +219,11 @@ public class ReticleStateMachine : BlinkIDUX.ReticleStateMachineProtocol {
   public var lastReticleStateChange: Foundation.TimeInterval
   public var eventCounter: [BlinkIDUX.ReticleState : Swift.Int]
   public var reticleStateIsInterruptible: Swift.Bool
-  public init()
+  #if compiler(>=5.3) && $NonescapableTypes
+  public init(extractionModule: BlinkIDUX.ExtractionModule?)
+  #endif
   public func calculateState(using mostFrequentState: BlinkIDUX.ReticleState) -> BlinkIDUX.ReticleState
+  public func setInitialState()
   public typealias ObjectWillChangePublisher = Combine.ObservableObjectPublisher
   @objc deinit
 }
@@ -224,6 +243,8 @@ public enum UIEvent : Swift.Equatable, Swift.Sendable {
   case tooBright
   case facePhotoNotFullyVisible
   case wrongSidePassportWithBarcode
+  case unsupportedDocument
+  case unparsableBarcode
   public static func == (a: BlinkIDUX.UIEvent, b: BlinkIDUX.UIEvent) -> Swift.Bool
 }
 @_hasMissingDesignatedInitializers final public class BlinkIDTheme : BlinkIDUX.UXThemeProtocol {
@@ -648,7 +669,6 @@ extension BlinkIDUX.ReticleStateMachineProtocol {
   #if compiler(>=5.3) && $NonescapableTypes
   public func calculateRemainingTime(stateDuration: Swift.Double? = nil) -> Swift.Double
   #endif
-  public func setInitialState()
 }
 public protocol ReticleStateProtocol : Swift.Hashable {
   #if compiler(>=5.3) && $NonescapableTypes
@@ -658,10 +678,11 @@ public protocol ReticleStateProtocol : Swift.Hashable {
   var shouldExpire: Swift.Bool { get }
   var canBeFallback: Swift.Bool { get }
   var isErrorState: Swift.Bool { get }
-  static var initialState: Self { get }
   static var inactiveState: Self { get }
   var reticleStateAppearance: BlinkIDUX.ReticleStateAppearance { get }
 }
+extension BlinkIDUX.ExtractionModule : Swift.Equatable {}
+extension BlinkIDUX.ExtractionModule : Swift.Hashable {}
 extension BlinkIDUX.BlinkIDScanningAlertType : Swift.Equatable {}
 extension BlinkIDUX.BlinkIDScanningAlertType : Swift.Hashable {}
 extension BlinkIDUX.BlinkIDScanningAlertType : Swift.RawRepresentable {}
