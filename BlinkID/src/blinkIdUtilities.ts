@@ -1,10 +1,13 @@
-import { StringResult } from "./types";
+/*
+import { StringResult } from "../lib/typescript/src";
+import { type StringResult } from "./types";
 
 export class BlinkIdUtilities {
   /**
    * Helper method for handling different string types,
    * based on the document information source.
    */
+/*
   static handleStringType<T>(raw: any): T | undefined {
     if (typeof raw === "string") {
       return raw as T;
@@ -12,9 +15,11 @@ export class BlinkIdUtilities {
 
     // Heuristically assume it's a StringResult if it's an object and matches expected shape
     if (typeof raw === "object" && raw !== null && "value" in raw) {
-      return new StringResult(raw) as T;
+      return StringResult {}
     }
 
     return undefined;
   }
 }
+
+  */

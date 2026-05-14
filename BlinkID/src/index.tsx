@@ -1,23 +1,22 @@
 // index.ts
-import { BlinkIdScanningResult } from "./blinkIdResult";
+import type { BlinkIdScanningResult } from "./blinkIdResult";
 import type {
   BlinkIdSdkSettings,
   BlinkIdSessionSettings,
   BlinkIdScanningUxSettings,
 } from "./blinkIdSettings";
-import type { ClassFilter } from "./types";
+import type {
+  ClassFilter,
+  RedactionSettings,
+  RedactionSettingsResolver,
+} from "./types";
 import type { Spec } from "./NativeBlinkidReactNative";
 
 // Configuration classes
-export {
-  BlinkIdScanningSettings,
-  BlinkIdSdkSettings,
-  BlinkIdSessionSettings,
-  BlinkIdScanningUxSettings,
-  CroppedImageSettings,
-} from "./blinkIdSettings";
+export * from "./blinkIdSettings";
 
-export { BlinkIdScanningResult } from "./blinkIdResult";
+// BlinkID result
+export type { BlinkIdScanningResult } from "./blinkIdResult";
 
 // Types & enums
 export * from "./types";
@@ -49,11 +48,15 @@ export default BlinkidReactNative;
  *
  * To obtain a valid license key, please visit https://developer.microblink.com/ or contact us directly at https://help.microblink.com.
  */
-export async function loadBlinkIdSdk(
-  blinkIdSdkSettings: BlinkIdSdkSettings
-): Promise<void> {
-  await BlinkidReactNative.loadBlinkIdSdk(JSON.stringify(blinkIdSdkSettings));
+export async function loadBlinkIdSdk({
+  sdkSettings,
+}: LoadBlinkIdSdkSettings): Promise<void> {
+  await BlinkidReactNative.loadBlinkIdSdk(JSON.stringify(sdkSettings));
 }
+
+export type LoadBlinkIdSdkSettings = {
+  sdkSettings: BlinkIdSdkSettings;
+};
 
 /**
  * The `unloadBlinkIdSdk` method terminates the BlinkID SDK and releases all associated resources.
@@ -67,16 +70,20 @@ export async function loadBlinkIdSdk(
  * @param deleteCachedResources - if set to `true` (`false` is default), the method performs a **complete cleanup**,
  * including deletion of all downloaded and cached SDK resources from the device.
  */
-export async function unloadBlinkIdSdk(
-  deleteCachedResources: boolean
-): Promise<void> {
+export async function unloadBlinkIdSdk({
+  deleteCachedResources = false,
+}: UnloadBlinkIdSdkSettings): Promise<void> {
   await BlinkidReactNative.unloadBlinkIdSdk(deleteCachedResources);
 }
+
+export type UnloadBlinkIdSdkSettings = {
+  deleteCachedResources: boolean;
+};
 
 /**
  * The `performScan` method launches the BlinkID scanning process with the default UX properties.
  *
- * It takes the following parameters: {@link BlinkIdSdkSettings}, {@link BlinkIdSessionSettings} and the optional {@link BlinkIdUiSettings} and {@link ClassFilter} settings.
+ * It takes the following parameters: {@link BlinkIdSdkSettings}, {@link BlinkIdSessionSettings} and the optional {@link BlinkIdUiSettings}, {@link RedactionSettingsResolver} {@link ClassFilter} settings.
  *
  * It returns the {@link BlinkIdScanningResult}.
  *
@@ -92,25 +99,40 @@ export async function unloadBlinkIdSdk(
  * @param classFilter - The optional `ClassFilter` class - the class which controls which documents will be accepted or reject for information extraction during the scanning session.
  * See {@link ClassFilter} for more implementation information.
  *
+ * @param redactionSettingsResolver - The optional Redaction Settings Resolver- Represents the document redaction settings. Use this when need per-document redaction behavior is neede — for example,
+ * anonymizing different fields depending on the document's country or type.
+ *
+ * The resolver is invoked by the SDK immediately before the scanning result is finalized.
+ *
  * @returns `BlinkIdScanningResult` - BlinkID scanning result - Represents the results of scanning a document.
  * This class contains the results of scanning a document, including the extracted data and images from the document.
  *
  */
-export async function performScan(
-  blinkIdSdkSettings: BlinkIdSdkSettings,
-  blinkIdSessionSettings: BlinkIdSessionSettings,
-  blinkIdScanningUxSettings?: BlinkIdScanningUxSettings,
-  classFilter?: ClassFilter
-): Promise<BlinkIdScanningResult> {
+export async function performScan({
+  sdkSettings,
+  sessionSettings,
+  scanningUxSettings,
+  classFilter,
+  redactionSettingsResolver,
+}: PerformScanSettings): Promise<BlinkIdScanningResult> {
   const jsonResult = await BlinkidReactNative.performScan(
-    JSON.stringify(blinkIdSdkSettings),
-    JSON.stringify(blinkIdSessionSettings),
-    JSON.stringify(blinkIdScanningUxSettings),
-    JSON.stringify(classFilter)
+    JSON.stringify(sdkSettings),
+    JSON.stringify(sessionSettings),
+    JSON.stringify(scanningUxSettings),
+    JSON.stringify(classFilter),
+    JSON.stringify(redactionSettingsResolver),
   );
 
-  return new BlinkIdScanningResult(JSON.parse(jsonResult));
+  return JSON.parse(jsonResult) as BlinkIdScanningResult;
 }
+
+export type PerformScanSettings = {
+  sdkSettings: BlinkIdSdkSettings;
+  sessionSettings: BlinkIdSessionSettings;
+  scanningUxSettings?: BlinkIdScanningUxSettings;
+  classFilter?: ClassFilter;
+  redactionSettingsResolver?: RedactionSettingsResolver;
+};
 
 /**
  * The `performDirectApiScan` platform channel method launches the BlinkID scanning process inteded for information extraction from static images.
@@ -123,6 +145,9 @@ export async function performScan(
  *
  * @param blinkIdSessionSettings - BlinkID Session Settings - the class that contains various settings for the scanning session. It contains the settings for the `ScanningMode` and `BlinkIdScanningSettings`, which define various parameters that control the scanning process.
  *
+ * @param redactionSettings - The optional Redaction settings - Represents the document redaction settings. Use this when need per-document redaction behavior is neede — for example,
+ * anonymizing different fields depending on the document's country or type.
+ *
  * @param firstImage - The `firstImage` Base64 string - image that represents one side of the document.
  * If the document contains two sides and the `ScanningMode` is set to `automatic`, this should contain the image of the front side of the document. In case the [ScanningMode] is set to `single`, it can
  * be either the front or the back side of the document.
@@ -132,18 +157,28 @@ export async function performScan(
  * @returns `BlinkIdScanningResult` - BlinkID scanning result - Represents the results of scanning a document.
  * This class contains the results of scanning a document, including the extracted data and images from the document.
  */
-export async function performDirectApiScan(
-  blinkIdSdkSettings: BlinkIdSdkSettings,
-  blinkIdSessionSettings: BlinkIdSessionSettings,
-  firstImage: string,
-  secondImage?: string
-): Promise<BlinkIdScanningResult> {
+export async function performDirectApiScan({
+  sdkSettings,
+  sessionSettings,
+  redactionSettings,
+  firstImage,
+  secondImage,
+}: PerformDirectApiScanSettings): Promise<BlinkIdScanningResult> {
   const jsonResult = await BlinkidReactNative.performDirectApiScan(
-    JSON.stringify(blinkIdSdkSettings),
-    JSON.stringify(blinkIdSessionSettings),
+    JSON.stringify(sdkSettings),
+    JSON.stringify(sessionSettings),
     firstImage,
-    secondImage
+    secondImage,
+    JSON.stringify(redactionSettings),
   );
 
-  return new BlinkIdScanningResult(JSON.parse(jsonResult));
+  return JSON.parse(jsonResult) as BlinkIdScanningResult;
 }
+
+export type PerformDirectApiScanSettings = {
+  sdkSettings: BlinkIdSdkSettings;
+  sessionSettings: BlinkIdSessionSettings;
+  redactionSettings?: RedactionSettings;
+  firstImage: string;
+  secondImage?: string;
+};

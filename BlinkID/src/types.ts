@@ -1,4 +1,361 @@
-import { BlinkIdUtilities } from "./blinkIdUtilities";
+/**
+ * Settings for the barcode extraction module.
+ *
+ * This module manages the detection and data extraction from various 1D and 2D
+ * barcode formats (such as PDF417, QR codes, and various retail codes).
+ *
+ * It can operate as a standalone module or in combination with document capture.
+ */
+export type BarcodeModuleSettings = {
+  /*
+   * If set to true, barcode presence becomes mandatory for the scanned document.
+   * For [ScanningMode.single], the barcode must be present on the scanned side.
+   * For [ScanningMode.automatic], the barcode must be present on one of the scanned sides.
+   *
+   * In case of a timeout and advancement to the next step in the scanning flow,
+   * if a barcode is detected on the scanned side but cannot be extracted,
+   * the presence requirement is considered fulfilled. As a result, barcode extraction
+   * will no longer be a requirement to complete the scan on next side.
+   */
+  presenceMandatory: boolean;
+
+  /*
+   * Indicates whether the barcode image should be returned in the result.
+   *
+   * The DPI setting and the extension factor do not affect returned barcode image.
+   */
+  barcodeImageReturnEnabled: boolean;
+  /*
+   * Enables the scanning and processing of Pdf417 barcodes.
+   *
+   * The current analyzer model flags a barcode as "present" if either a `PDF417` or a `QR` code is detected.
+   * Because the model does not distinguish between the two types at this stage, a conflict can occur:
+   * if `PDF417` is enabled but `QR` is disabled, the analyzer may trigger for a `QR` code, causing the process to hang.
+   * To prevent this, `pdf417ScanningEnabled` and `qrScanningEnabled` must be enabled together.
+   */
+  pdf417ScanningEnabled: boolean;
+  /*
+   * Enables the scanning and processing of QR barcodes.
+   *
+   * The current analyzer model flags a barcode as "present" if either a `PDF417` or a `QR` code is detected.
+   * Because the model does not distinguish between the two types at this stage, a conflict can occur:
+   * if `PDF417` is enabled but `QR` is disabled, the analyzer may trigger for a `QR` code, causing the process to hang.
+   *
+   * To prevent this, `qrScanningEnabled` and `pdf417ScanningEnabled` must be enabled together.
+   */
+  qrScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of UPC-E barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  upceScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of UPC-A barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  upcaScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of Code-128 barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  code128ScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of Code-39 barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  code39ScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of EAN-8 barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  ean8ScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of EAN-13 barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  ean13ScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of ITF barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  itfScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of DataMatrix barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  dataMatrixScanningEnabled: boolean;
+};
+
+/*
+ * Settings for the document capture module.
+ *
+ * This module is responsible for the initial document detection, image extraction
+ * (such as face and document images), and image quality validation (blur, glare,
+ * and lighting checks).
+ */
+export type DocumentCaptureModuleSettings = {
+  /*
+   * Indicates whether the input image is already cropped and perspective-corrected.
+   *
+   * Requires the input image to consist solely of the cropped document image with perspective correction applied.
+   * This only applies to images from the DirectAPI method of scanning — with images from the default scanning, the setting will be ignored.
+   */
+  inputImageCropped: boolean;
+
+  /*
+   * Enables the scanning and processing of unsupported document types.
+   *
+   * A document is considered unsupported if its classification result is `OTHER`.
+   */
+  unsupportedDocumentsAllowed: boolean;
+
+  /*
+   * Indicates whether the back side scan should be skipped if the document supports only image capture on that side.
+   *
+   * Some documents have a back side that is supported but contains no extractable data (no MRZ, Barcode, etc.).
+   * These sides will be "captured only".
+   *
+   * If set to `true` (default), the scanning process will stop after the front side for such documents.
+   * If set to `false`, the back side will be captured, even though no data extraction is performed.
+   */
+  secondSideWithNoExtractableDataSkipped: boolean;
+
+  /*
+   * Indicates whether only the passport data page should be scanned.
+   *
+   * Scan only the data page (page containing `MRZ`) of the passport.
+   *
+   * If set to `false`, it will be required to scan the second page of certain passports.
+   */
+  passportDataPageScanOnly: boolean;
+
+  /*
+   * Enables the extraction of the document's face image.
+   *
+   * If a face image is present on the document, extraction becomes mandatory if supported.
+   *
+   * For supported documents, the requirement for its presence is determined by document rules.
+   * For unsupported documents, presence is optional.
+   */
+  faceImageExtractionEnabled: boolean;
+
+  /*
+   * If set to `true`, face image presence will be mandatory for the scanned document.
+   *
+   * For [ScanningMode.automatic], document side with the face image must be scanned first.
+   *
+   * In case of a timeout and advancement to the next step in the scanning flow,
+   * if a face image is detected on the scanned side but cannot be extracted,
+   * the presence requirement is considered fulfilled. As a result, face image extraction
+   * will no longer be required to complete the scan on the next side.
+   */
+  faceImagePresenceMandatory: boolean;
+
+  /*
+   * Indicates whether input images should be returned in the result.
+   *
+   * Saves the input images at the moment of data extraction or timeout.
+   * This significantly increases memory consumption. Scanning performance is not affected.
+   */
+  inputImageReturnEnabled: boolean;
+
+  /*
+   * Indicates whether the cropped document image should be returned in the result.
+   *
+   */
+  documentImageReturnEnabled: boolean;
+
+  /*
+   * Defines the minimum required margin (in percentage) between the edge of the input image and the document.
+   *
+   * This setting is implemented to comply with regulations in certain countries that mandate documents
+   * to be stored with adequate margins in the image.
+   *
+   * Default value is `0.02`.
+   * The setting is applicable only when using images from `Video` source.
+   * The setting is ignored if `inputImageCropped == true`.
+   *
+   * Allowed minimal value is `0.0` and maximum value is `1.0`.
+   */
+  inputImageMargin?: number;
+
+  /*
+   * The DPI value for the cropped document, face and signature image.
+   *
+   * Allowed minimal value is `100` and maximum value is `400`.
+   */
+  dotsPerInch: number;
+
+  /*
+   * The extension factor for the cropped document image. Applicable only to document images.
+   * Allowed minimal value is `0.0` and maximum value is `1.0`.
+   *
+   */
+  extensionFactor: number;
+
+  /*
+   * The sensitivity of blur detection in the document image.
+   *
+   * Defines the severity of blur detected in the document image.
+   *
+   * Low – less sensitive to blur; if something is detected as blur, it is almost certainly actual blur,
+   * but some amount of blur may not be detected.
+   *
+   * High – highly sensitive to blur; it may detect blur even if it only resembles blur.
+   *
+   * See {@link SensitivityLevel} for more information
+   */
+  blurSensitivityLevel: SensitivityLevel;
+
+  /*
+   * Indicates whether images with detected blur should be rejected.
+   *
+   * If `true`, images with detected blur will be excluded from further processing.
+   *
+   * If `false`, images will still be processed and blur status will be reported in the result.
+   */
+  imageWithBlurRejected: boolean;
+
+  /*
+   * The sensitivity of glare detection in the document image.
+   *
+   * Low – less sensitive to glare.
+   * High – highly sensitive to glare.
+   * See {@link SensitivityLevel} for more information
+   */
+  glareSensitivityLevel: SensitivityLevel;
+
+  /*
+   * Indicates whether images with detected glare should be rejected.
+   *
+   * If `true`, images with detected glare will be excluded from further processing.
+   *
+   * If `false`, images will still be processed and glare status will be reported in the result.
+   */
+  imageWithGlareRejected: boolean;
+
+  /*
+   * The sensitivity of allowed detected tilt of the document in the image.
+   *
+   * Low – less sensitive to tilt.
+   * High – highly sensitive to tilt.
+   * See {@link SensitivityLevel} for more information
+   */
+  tiltSensitivityLevel: SensitivityLevel;
+
+  /*
+   * Indicates whether images with poor lighting conditions should be rejected.
+   *
+   * Poor lighting conditions are represented as either `tooBright` or `tooDark`.
+   *
+   * If `true`, such images will be excluded from further processing.
+   */
+  imageWithPoorLightingRejected: boolean;
+
+  /*
+   * Indicates whether images occluded by a hand should be rejected.
+   *
+   * If `true`, occluded images will be excluded from further processing.
+   *
+   * This setting is applicable only if `inputImageCropped == false`.
+   */
+  imageWithHandOcclusionRejected: boolean;
+};
+
+/*
+ * Settings for the MRZ (Machine Readable Zone) extraction module.
+ *
+ * This module is dedicated to the detection and parsing of machine-readable
+ * zone typically found on passports, visas, and identity cards.
+ */
+export type MrzModuleSettings = {
+  /*
+   * If set to `true`, MRZ presence becomes mandatory for the scanned document
+   * regardless of the document rules.
+   *
+   * For [ScanningMode.single], the MRZ must be present on the scanned side.
+   * For [ScanningMode.automatic], the MRZ must be present on one of the scanned sides.
+   *
+   * In case of a timeout and advancement to the next step in the scanning flow,
+   * if an MRZ is detected on the scanned side but cannot be extracted,
+   * the presence requirement is considered fulfilled. As a result, MRZ extraction
+   * will no longer be required to complete the scan on the next side.
+   */
+  presenceMandatory: boolean;
+};
+
+/*
+ * Settings for the VIZ (Visual Inspection Zone) extraction module.
+ *
+ * This module is responsible for extracting data from the document's
+ * visual fields.
+ *
+ * It supports features such as character validation for increased accuracy,
+ * signature image extraction, and data aggregation across multiple video frames.
+ */
+export type VizModuleSettings = {
+  /*
+   * If set to true, Viz presence becomes mandatory for the scanned document.
+   *
+   * For {@link ScanningMode.single}, the Viz must be present on the scanned side.
+   * Only the front side of supported documents can be scanned.
+   *
+   * For {@link ScanningMode.automatic}, this setting won't affect the default behaviour;
+   * front side must be scanned first followed by the back side.
+   *
+   * In case of a timeout and advancement to the next step in the scanning flow,
+   * if a Viz was not extracted fully from a front side, we'll proceed to extract Viz
+   * from the back side, if present.
+   */
+  presenceMandatory: boolean;
+
+  /*
+   * Enables the extraction of the document's signature image if supported.
+   *
+   * For supported documents, signature image extraction is determined by document rules.
+   * For unsupported documents, extraction won't be performed.
+   */
+  signatureImageExtractionEnabled: boolean;
+
+  /*
+   * Indicates whether character validation is enabled.
+   *
+   * Allow only results containing expected characters for a given field.
+   * Each field is validated against a set of rules.
+   * All fields have to be successfully validated in order to successfully scan a document.
+   * Setting is used to improve scanning accuracy.
+   */
+  characterValidationEnabled: boolean;
+
+  /*
+   * Indicates whether the aggregation of data from multiple input images is enabled.
+   *
+   * Disabling this setting will yield higher-quality captured images, but it may slow down the scanning process due to the additional
+   * effort required to find the optimal image.
+   *
+   * Enabling this setting will simplify the extraction process, but the extracted data will be aggregated from multiple images instead
+   * of being sourced from a single image.
+   *
+   * This only applies to images from `Video` input image source - for images from `Photo` source, setting will be ignored.
+   */
+  resultAggregationEnabled: boolean;
+};
 
 /**
  * ClassFilter represents the document filter used to determine which documents will be processed.
@@ -9,7 +366,7 @@ import { BlinkIdUtilities } from "./blinkIdUtilities";
  *
  * By default, the ClassFilter is turned off, and all documents will be included.
  */
-export class ClassFilter {
+export type ClassFilter = {
   /**
    * Document classes that will be explicitly accepted by this filter.
    * Only documents belonging to the specified classes will be processed. All other documents will be rejected.
@@ -63,27 +420,40 @@ export class ClassFilter {
    * See {@link DocumentFilter} for setting the combinations.
    */
   excludeDocuments?: DocumentFilter[];
+};
 
-  /**
+/*
+ * A resolver that provides custom [RedactionSettings] for a scanned document
+ * based on its detected class information.
+ *
+ * Add the resolver when you need per-document redaction behavior — for example,
+ * anonymizing different fields depending on the document's country or type. The resolver
+ * is invoked by the SDK immediately before the scanning result is finalized.
+ *
+ * If not added, the SDK will use the default [RedactionSettings] for a given document class.
+ */
+export type RedactionSettingsResolver = {
+  /*
+   * A list of redaction configurations evaluated by the SDK.
    *
-   * @param includeDocuments - specifies which document classes that will be explicitly accepted by this filter.
-   * @param excludeDocuments - specifies which document classes that will be explicitly rejected by this filter.
+   * Each [RedactionSettings] entry can target specific document classes
+   * using [RedactionSettings.documentFilter].
+   *
+   * During scanning, the SDK selects the first matching configuration
+   * for the detected document class and applies its redaction rules.
+   *
+   * If no matching configuration is found, the default SDK redaction
+   * behavior is used.
    */
-  constructor(
-    includeDocuments?: DocumentFilter[],
-    excludeDocuments?: DocumentFilter[],
-  ) {
-    this.includeDocuments = includeDocuments;
-    this.excludeDocuments = excludeDocuments;
-  }
-}
+  documentRedactionList: RedactionSettings[];
+};
 
 /**
  * Represents the document filter.
  *
- * Used with other classes like the {@link ClassFilter}, {@link DocumentRules} and the {@link DocumentAnonymizationSettings}.
+ * Used with other classes like the {@link ClassFilter}, {@link DocumentRules} and the {@link RedactionSettings}.
  */
-export class DocumentFilter {
+export type DocumentFilter = {
   /**
    * If set, only specified country will pass the filter criteria.
    * Otherwise, issuing country will not betaken into account.
@@ -101,86 +471,7 @@ export class DocumentFilter {
    * Otherwise, issuing type will not be taken into account.
    */
   documentType?: DocumentType;
-
-  /**
-   *
-   * @param country - specifies the {@link Country} that will pass the filter criteria.
-   *
-   * @param region - specifies the {@link Region} that will pass the filter criteria.
-   *
-   * @param documentType - specifies the {@link DocumentType} that will pass the filter criteria.
-   *
-   *
-   * All parameters are optional, and do not need to be added.
-   * The filter can be set to be more generic (for example, to only accept document from USA):
-   * ```
-   * DocumentFilter(Country.Usa);
-   * ```
-   * or, it can be set to be more specific (for example, to specifically accept USA drivers licenses from California):
-   * ```
-   * DocumentFilter(Country.Usa, Region.California, DocumentType.Dl);
-   * ```
-   */
-  constructor(country?: Country, region?: Region, documentType?: DocumentType) {
-    this.country = country;
-    this.region = region;
-    this.documentType = documentType;
-  }
-}
-
-/**
- * Represents the custom document rules.
- *
- * This setting allows users to narrow down our internal rules on mandatory fields. All undefined fields will become optional.
- * It is not possible to mark fields as mandatory if they cannot theoretically appear on the document.
- * The more detailed document filter will have priority over the other.
- *
- * Document fields are validated using internal rules that define mandatory fields for the scanned document class.
- */
-export class DocumentRules {
-  /**
-   * Specified fields will overrule our document class field rules if filter conditions are met.
-   *
-   * See {@link DocumentFilter} for more information.
-   */
-  documentFilter?: DocumentFilter;
-
-  /**
-   * Fields to overrule our class field rules.
-   *
-   * See {@link DetailedFieldType} for more information.
-   */
-  fields: DetailedFieldType[];
-
-  /**
-   * Represents the custom document rules.
-   *
-   * This setting allows users to narrow down our internal rules on mandatory fields. All undefined fields will become optional.
-   * It is not possible to mark fields as mandatory if they cannot theoretically appear on the document.
-   * The more detailed document filter will have priority over the other.
-   *
-   * Document fields are validated using internal rules that define mandatory fields for the scanned document class.
-   * Defines custom rules for specific document class.
-   *
-   * When defining {@link DocumentRules}, the {@link DocumentFilter} paramter is optionally set to specify the document to which the rule applies, and a `fields` with
-   *     the appropriate `alphabetType` should be specified as mandatory for that document.
-   * If a `fields` is set to a field that is optional for that document or does not exist on it, all fields on the document become optional.
-   * If a `fields` is set to a field with an incorrect alphabetType, all fields on the document become optional.
-   * If a `fields` is set to a field that doesn’t exist in the internal rules, that rule is ignored.
-   * When adding multiple `fields`, any field that does not match our rules is ignored. Only fields that comply with our rules are set as mandatory.
-   * If the documentFilter fields `country`, `region`, or `type` are set to `null`, all supported values for those fields will be considered.
-   *     For example, if `country = null`, the rule will apply to all supported countries in BlinkID.
-   *
-   * @param fields - specifies the list of {@link DetailedFieldType} for overruling our class field rules.
-   * This parameter is mandatory.
-   * @param documentFilter - specifies the {@link DocumentFilter} to specify the document to which the rule applies.
-   * This parameter is optional.
-   */
-  constructor(fields: DetailedFieldType[], documentFilter?: DocumentFilter) {
-    this.fields = fields;
-    this.documentFilter = documentFilter;
-  }
-}
+};
 
 /**
  * Represents the detailed field type.
@@ -215,10 +506,15 @@ export class DetailedFieldType {
 }
 
 /**
- * Represents the document anonymization settings.
+ * Represents the document redaction settings.
  *
  */
-export class DocumentAnonymizationSettings {
+export type RedactionSettings = {
+  /**
+   * The mode of redaction applied to the document.
+   */
+  mode: RedactionMode;
+
   /**
    * Document fields that will be anonymized.
    *
@@ -226,43 +522,31 @@ export class DocumentAnonymizationSettings {
   fields: FieldType[];
 
   /**
+   * Document number anonymization settings.
+   *
+   */
+  documentNumberRedactionSettings?: DocumentNumberRedactionSettings;
+
+  /*
+   * If true, whole Mrz result will be redacted.
+   *
+   * Default: `false`
+   */
+  redactMrzResult: boolean;
+
+  /*
+   * If true, whole Barcode result will be redacted.
+   *
+   * Default: `false`
+   */
+  redactBarcodeResult: boolean;
+
+  /**
    * Specified fields will be anonymized if filter conditions are met.
    *
    */
   documentFilter?: DocumentFilter;
-
-  /**
-   * Document number anonymization settings.
-   *
-   */
-  documentNumberAnonymizationSettings?: DocumentNumberAnonymizationSettings;
-
-  /**
-   *
-   * @param fields - specifies the document fields that will be anonymized. This parameter is mandatory.
-   *
-   * @param documentFilter - specifies the document filter.
-   *
-   * If the conditions of the filter are met, fields of those documents will be anonymized.
-   * This parameter is mandatory.
-   * @param documentNumberAnonymizationSettings - specifies the document number anonymization settings.
-   *
-   * If this parameter is set, it will anonymize the document number, even if the document number is not set in the `fields` parameter.
-   * If the default constructor for {@link DocumentNumberAnonymizationSettings} is used, all of the digits within the document number will be anonymized.
-   *
-   * This parameter is optional.
-   */
-  constructor(
-    fields: FieldType[],
-    documentFilter?: DocumentFilter,
-    documentNumberAnonymizationSettings?: DocumentNumberAnonymizationSettings,
-  ) {
-    this.fields = fields;
-    this.documentFilter = documentFilter;
-    this.documentNumberAnonymizationSettings =
-      documentNumberAnonymizationSettings;
-  }
-}
+};
 
 /**
  * Represents the document number anonymization settings.
@@ -274,7 +558,7 @@ export class DocumentAnonymizationSettings {
  *
  * If any parameter is `undefined`, the value of the parameter will be set to `0`.
  */
-export class DocumentNumberAnonymizationSettings {
+export type DocumentNumberRedactionSettings = {
   /**
    * Defines how many digits at the beginning of the document number remain visible after anonymization.
    *
@@ -286,73 +570,13 @@ export class DocumentNumberAnonymizationSettings {
    *
    */
   suffixDigitsVisible?: number;
-
-  constructor(
-    prefixDigitsVisible: number = 0,
-    suffixDigitsVisible: number = 0,
-  ) {
-    this.prefixDigitsVisible = prefixDigitsVisible;
-    this.suffixDigitsVisible = suffixDigitsVisible;
-  }
-}
-/**
- * Represents the configuration used to enable/disable recognition of specific
- * document groups.
- *
- * By default all modes are enabled.
- */
-export class RecognitionModeFilter {
-  /**
-   * Enable scanning of MRZ IDs.
-   *
-   */
-  enableMrzId: boolean;
-
-  /**
-   * Enable scanning of visa MRZ.
-   *
-   */
-  enableMrzVisa: boolean;
-
-  /**
-   * Enable scanning of Passport MRZ.
-   *
-   */
-  enableMrzPassport: boolean;
-
-  /**
-   * Enable scanning of Photo ID.
-   *
-   */
-  enablePhotoId: boolean;
-
-  /**
-   * Enable scanning of barcode IDs.
-   *
-   */
-  enableBarcodeId: boolean;
-
-  /**
-   * Enable full document recognition.
-   *
-   */
-  enableFullDocumentRecognition: boolean;
-
-  constructor() {
-    this.enableMrzId = true;
-    this.enableMrzVisa = true;
-    this.enableMrzPassport = true;
-    this.enablePhotoId = true;
-    this.enableBarcodeId = true;
-    this.enableFullDocumentRecognition = true;
-  }
-}
+};
 
 /**
  * Represents the document class information.
  *
  */
-export class DocumentClassInfo {
+export type DocumentClassInfo = {
   /**
    * The document country.
    *
@@ -402,29 +626,13 @@ export class DocumentClassInfo {
    *
    */
   isoAlpha3CountryCode?: string;
-
-  /**
-   *
-   * @param nativeDocumentClassInfo
-   *
-   */
-  constructor(nativeDocumentClassInfo: any) {
-    this.country = nativeDocumentClassInfo.country;
-    this.region = nativeDocumentClassInfo.region;
-    this.documentType = nativeDocumentClassInfo.documentType;
-    this.empty = nativeDocumentClassInfo.empty;
-    this.countryName = nativeDocumentClassInfo.countryName;
-    this.isoNumericCountryCode = nativeDocumentClassInfo.isoNumericCountryCode;
-    this.isoAlpha2CountryCode = nativeDocumentClassInfo.isoAlpha2CountryCode;
-    this.isoAlpha3CountryCode = nativeDocumentClassInfo.isoAlpha3CountryCode;
-  }
-}
+};
 
 /**
  * Represents the result of the data match.
  *
  */
-export class DataMatchResult {
+export type DataMatchResult = {
   /**
    * The state of the data match on the whole document.
    *
@@ -438,25 +646,13 @@ export class DataMatchResult {
    * See {@link DataMatchResultField} for more information.
    */
   states?: DataMatchResultField[];
-
-  /**
-   *
-   * @param nativeDataMatchResult
-   */
-  constructor(nativeDataMatchResult: any) {
-    this.overallState =
-      nativeDataMatchResult.overallState != undefined
-        ? (nativeDataMatchResult.overallState as DataMatchState)
-        : undefined;
-    this.states = nativeDataMatchResult.states;
-  }
-}
+};
 
 /**
  * Represents the state of the field in the data match.
  *
  */
-export class DataMatchResultField {
+export type DataMatchResultField = {
   /**
    * The type of the field.
    *
@@ -469,17 +665,7 @@ export class DataMatchResultField {
    * See {@link DataMatchState} for more information.
    */
   state?: DataMatchState;
-
-  /**
-   *
-   * @param nativeDataMatchResultField
-   *
-   */
-  constructor(nativeDataMatchResultField: any) {
-    this.field = nativeDataMatchResultField.field;
-    this.state = nativeDataMatchResultField.state;
-  }
-}
+};
 
 /**
  * Represents the multi-alphabet string result extracted from the OCR.
@@ -487,7 +673,7 @@ export class DataMatchResultField {
  * The result contains the extracted strings, their locations, and the sides of the extracted strings.
  *
  */
-export class StringResult {
+export type StringResult = {
   /**
    * All strings separated by new line
    *
@@ -531,34 +717,13 @@ export class StringResult {
    * See {@link Side} for more information.
    */
   side?: Side;
-
-  /**
-   *
-   * @param nativeStringResult
-   *
-   */
-  constructor(nativeStringResult: any) {
-    this.value = nativeStringResult.value;
-    this.latin = nativeStringResult.latin;
-    this.cyrillic = nativeStringResult.cyrillic;
-    this.arabic = nativeStringResult.arabic;
-    this.greek = nativeStringResult.greek;
-    this.location =
-      nativeStringResult.location != undefined
-        ? new Location(nativeStringResult.location)
-        : undefined;
-    this.side =
-      nativeStringResult.side != undefined
-        ? new Side(nativeStringResult.side)
-        : undefined;
-  }
-}
+};
 
 /**
  * Represents the rectangle location of each document field
  *
  */
-export class Rectangle {
+export type Rectangle = {
   /**
    * X location
    *
@@ -582,25 +747,13 @@ export class Rectangle {
    *
    */
   height?: number;
-
-  /**
-   *
-   * @param nativeRectangle
-   *
-   */
-  constructor(nativeRectangle: any) {
-    this.x = nativeRectangle.x;
-    this.y = nativeRectangle.y;
-    this.width = nativeRectangle.width;
-    this.height = nativeRectangle.height;
-  }
-}
+};
 
 /**
  * Represents the information about the location of an element within a document or image.
  *
  */
-export class Location {
+export type Location = {
   /**
    * Rectangle location of the result extracted from the OCR in the latin alphabet.
    *
@@ -624,37 +777,13 @@ export class Location {
    *
    */
   greek?: Rectangle;
-
-  /**
-   *
-   * @param nativeLocation
-   *
-   */
-  constructor(nativeLocation: any) {
-    this.latin =
-      nativeLocation.latin != undefined
-        ? new Rectangle(nativeLocation.latin)
-        : undefined;
-    this.arabic =
-      nativeLocation.arabic != undefined
-        ? new Rectangle(nativeLocation.arabic)
-        : undefined;
-    this.cyrillic =
-      nativeLocation.cyrillic != undefined
-        ? new Rectangle(nativeLocation.cyrillic)
-        : undefined;
-    this.greek =
-      nativeLocation.greek != undefined
-        ? new Rectangle(nativeLocation.greek)
-        : undefined;
-  }
-}
+};
 
 /**
  * Side of the document on which the specific result is located.
  *
  */
-export class Side {
+export type Side = {
   /**
    * Document side of the result extracted from the OCR in the latin alphabet.
    *
@@ -678,26 +807,14 @@ export class Side {
    *
    */
   greek?: DocumentSide;
-
-  /**
-   *
-   * @param nativeSide
-   *
-   */
-  constructor(nativeSide: any) {
-    this.latin = nativeSide.latin;
-    this.arabic = nativeSide.arabic;
-    this.cyrillic = nativeSide.cyrillic;
-    this.greek = nativeSide.greek;
-  }
-}
+};
 
 /**
  * Represents the result of the date extraction.
  *
  * Contains the extracted date, along with additional date information.
  */
-export class DateResult<T> {
+export type DateResult<T> = {
   /**
    * The extracted date information.
    *
@@ -723,22 +840,13 @@ export class DateResult<T> {
    *
    */
   successfullyParsed?: boolean;
-
-  constructor(nativeDateResult: any) {
-    this.date = nativeDateResult.date;
-    this.originalString = BlinkIdUtilities.handleStringType<T>(
-      nativeDateResult.originalString,
-    );
-    this.isFilledByDomainKnowledge = nativeDateResult.isFilledByDomainKnowledge;
-    this.successfullyParsed = nativeDateResult.successfullyParsed;
-  }
-}
+};
 
 /**
  * Represents the extracted date.
  *
  */
-export class Date {
+export type Date = {
   /**
    * Day of the month.
    *
@@ -757,23 +865,13 @@ export class Date {
    *
    */
   year?: number;
-
-  /**
-   *
-   * @param nativeDate
-   */
-  constructor(nativeDate: any) {
-    this.day = nativeDate.day;
-    this.month = nativeDate.month;
-    this.year = nativeDate.year;
-  }
-}
+};
 
 /**
  * Represents detailed extracted information about the driver license.
  *
  */
-export class DriverLicenseDetailedInfo<T> {
+export type DriverLicenseDetailedInfo<T> = {
   /**
    * The restrictions to driving privileges for the United States driver license owner.
    *
@@ -806,27 +904,13 @@ export class DriverLicenseDetailedInfo<T> {
    * See {@link VehicleClassInfo} for more information.
    */
   vehicleClassesInfo?: VehicleClassInfo<T>[];
-
-  constructor(nativeDriverLicenseDetailedInfo: any) {
-    this.restrictions = BlinkIdUtilities.handleStringType(
-      nativeDriverLicenseDetailedInfo.restrictions,
-    );
-    this.endorsements = BlinkIdUtilities.handleStringType(
-      nativeDriverLicenseDetailedInfo.endorsements,
-    );
-    this.vehicleClass = BlinkIdUtilities.handleStringType(
-      nativeDriverLicenseDetailedInfo.vehicleClass,
-    );
-    this.vehicleClassesInfo =
-      nativeDriverLicenseDetailedInfo.vehicleClassesInfo;
-  }
-}
+};
 
 /**
  * Represents the information about the vehicle class extraction.
  *
  */
-export class VehicleClassInfo<T> {
+export type VehicleClassInfo<T> = {
   /**
    * The type of driver licence.
    *
@@ -852,24 +936,13 @@ export class VehicleClassInfo<T> {
    * See {@link DateResult} for more information.
    */
   expiryDate?: DateResult<T>;
-
-  constructor(nativeVehicleClassInfo: any) {
-    this.licenceType = BlinkIdUtilities.handleStringType<T>(
-      nativeVehicleClassInfo.licenceType,
-    );
-    this.vehicleClass = BlinkIdUtilities.handleStringType<T>(
-      nativeVehicleClassInfo.vehicleClass,
-    );
-    this.effectiveDate = nativeVehicleClassInfo.effectiveDate;
-    this.expiryDate = nativeVehicleClassInfo.expiryDate;
-  }
-}
+};
 
 /**
  * Information about the dependent.
  *
  */
-export class DependentInfo {
+export type DependentInfo = {
   /**
    * The date of birth of the dependent.
    *
@@ -899,21 +972,13 @@ export class DependentInfo {
    *
    */
   empty?: boolean;
-
-  constructor(nativeDependentInfo: any) {
-    this.dateOfBirth = nativeDependentInfo.dateOfBirth;
-    this.sex = nativeDependentInfo.sex;
-    this.documentNumber = nativeDependentInfo.documentNumber;
-    this.fullName = nativeDependentInfo.fullName;
-    this.empty = nativeDependentInfo.empty;
-  }
-}
+};
 
 /**
  * Represents the result of the image crop transformation with additional details.
  *
  */
-export class DetailedCroppedImageResult {
+export type DetailedCroppedImageResult = {
   /**
    * The cropped image in the Base64 format
    *
@@ -931,24 +996,7 @@ export class DetailedCroppedImageResult {
    *
    */
   location?: Rectangle;
-
-  /**
-   *
-   * @param nativeDetailedCroppedImageResult
-   *
-   */
-  constructor(nativeDetailedCroppedImageResult: any) {
-    this.image = nativeDetailedCroppedImageResult.image;
-    this.side =
-      nativeDetailedCroppedImageResult.side != undefined
-        ? (nativeDetailedCroppedImageResult.side as ScanningSide)
-        : undefined;
-    this.location =
-      nativeDetailedCroppedImageResult.location != undefined
-        ? new Rectangle(nativeDetailedCroppedImageResult.location)
-        : undefined;
-  }
-}
+};
 
 /**
  * Represents the result of scanning a single side of the document.
@@ -956,7 +1004,7 @@ export class DetailedCroppedImageResult {
  * Contains the data extracted from the Visual Inspection Zone, Machine Readable Zone,
  * barcode, the input image, and the cropped document, face, and signature images.
  */
-export class SingleSideScanningResult {
+export type SingleSideScanningResult = {
   /**
    * The data extracted from the Visual Inspection Zone.
    *
@@ -1004,29 +1052,13 @@ export class SingleSideScanningResult {
    *
    */
   signatureImage?: DetailedCroppedImageResult;
-
-  /**
-   *
-   * @param nativeSingleSideScanningResult - specifies the single side scanning result obtained from the native SDK.
-   *
-   */
-  constructor(nativeSingleSideScanningResult: any) {
-    this.viz = nativeSingleSideScanningResult.viz;
-    this.mrz = nativeSingleSideScanningResult.mrz;
-    this.barcode = nativeSingleSideScanningResult.barcode;
-    this.inputImage = nativeSingleSideScanningResult.inputImage;
-    this.barcodeInputImage = nativeSingleSideScanningResult.barcodeInputImage;
-    this.documentImage = nativeSingleSideScanningResult.documentImage;
-    this.faceImage = nativeSingleSideScanningResult.faceImage;
-    this.signatureImage = nativeSingleSideScanningResult.signatureImage;
-  }
-}
+};
 
 /**
  * Represents the result of the Visual Inspection Zone of a document.
  *
  */
-export class VizResult {
+export type VizResult = {
   /**
    * The first name of the document owner.
    *
@@ -1244,6 +1276,11 @@ export class VizResult {
   documentNumber?: StringResult;
 
   /**
+   * The card access number
+   */
+  cardAccessNumber?: StringResult;
+
+  /**
    * The personal identification number.
    *
    */
@@ -1387,87 +1424,13 @@ export class VizResult {
    * The work restriction of the document owner.
    */
   workRestriction?: StringResult;
-
-  /**
-   *
-   * @param nativeVizResult
-   *
-   */
-  constructor(nativeVizResult: any) {
-    this.firstName = nativeVizResult.firstName;
-    this.lastName = nativeVizResult.lastName;
-    this.fullName = nativeVizResult.fullName;
-    this.additionalNameInformation = nativeVizResult.additionalNameInformation;
-    this.localizedName = nativeVizResult.localizedName;
-    this.fathersName = nativeVizResult.fathersName;
-    this.mothersName = nativeVizResult.mothersName;
-    this.address = nativeVizResult.address;
-    this.additionalAddressInformation =
-      nativeVizResult.additionalAddressInformation;
-    this.additionalOptionalAddressInformation =
-      nativeVizResult.additionalOptionalAddressInformation;
-    this.placeOfBirth = nativeVizResult.placeOfBirth;
-    this.nationality = nativeVizResult.nationality;
-    this.race = nativeVizResult.race;
-    this.religion = nativeVizResult.religion;
-    this.profession = nativeVizResult.profession;
-    this.maritalStatus = nativeVizResult.maritalStatus;
-    this.residentialStatus = nativeVizResult.residentialStatus;
-    this.employer = nativeVizResult.employer;
-    this.sex = nativeVizResult.sex;
-    this.sponsor = nativeVizResult.sponsor;
-    this.bloodType = nativeVizResult.bloodType;
-    this.dateOfBirth = nativeVizResult.dateOfBirth;
-    this.dateOfIssue = nativeVizResult.dateOfIssue;
-    this.dateOfExpiry = nativeVizResult.dateOfExpiry;
-    this.dateOfEntry = nativeVizResult.dateOfEntry;
-    this.localityCode = nativeVizResult.localityCode;
-    this.maidenName = nativeVizResult.maidenName;
-    this.municipalityCode = nativeVizResult.municipalityCode;
-    this.municipalityOfRegistration =
-      nativeVizResult.municipalityOfRegistration;
-    this.pollingStationCode = nativeVizResult.pollingStationCode;
-    this.registrationCenterCode = nativeVizResult.registrationCenterCode;
-    this.sectionCode = nativeVizResult.sectionCode;
-    this.stateCode = nativeVizResult.stateCode;
-    this.stateName = nativeVizResult.stateName;
-    this.dateOfExpiryPermanent = nativeVizResult.dateOfExpiryPermanent;
-    this.documentNumber = nativeVizResult.documentNumber;
-    this.personalIdNumber = nativeVizResult.personalIdNumber;
-    this.documentAdditionalNumber = nativeVizResult.documentAdditionalNumber;
-    this.documentOptionalAdditionalNumber =
-      nativeVizResult.documentOptionalAdditionalNumber;
-    this.additionalPersonalIdNumber =
-      nativeVizResult.additionalPersonalIdNumber;
-    this.issuingAuthority = nativeVizResult.issuingAuthority;
-    this.visaType = nativeVizResult.visaType;
-    this.driverLicenseDetailedInfo = nativeVizResult.driverLicenseDetailedInfo;
-    this.documentSubtype = nativeVizResult.documentSubtype;
-    this.remarks = nativeVizResult.remarks;
-    this.residencePermitType = nativeVizResult.residencePermitType;
-    this.manufacturingYear = nativeVizResult.manufacturingYear;
-    this.vehicleType = nativeVizResult.vehicleType;
-    this.eligibilityCategory = nativeVizResult.eligibilityCategory;
-    this.specificDocumentValidity = nativeVizResult.specificDocumentValidity;
-    this.dependentsInfo = nativeVizResult.dependentsInfo;
-    this.vehicleOwner = nativeVizResult.vehicleOwner;
-    this.countryCode = nativeVizResult.countryCode;
-    this.certificateNumber = nativeVizResult.certificateNumber;
-    this.nationalInsuranceNumber = nativeVizResult.nationalInsuranceNumber;
-    this.effectiveDate = nativeVizResult.effectiveDate;
-    this.parentsInfo = nativeVizResult.parentsInfo;
-    this.husbandName = nativeVizResult.husbandName;
-    this.legalStatus = nativeVizResult.legalStatus;
-    this.socialSecurityStatus = nativeVizResult.socialSecurityStatus;
-    this.workRestriction = nativeVizResult.workRestriction;
-  }
-}
+};
 
 /**
  * Represents the result of the MRZ recognition.
  *
  */
-export class MrzResult {
+export type MrzResult = {
   /**
    * The entire Machine Readable Zone text from ID.
    *
@@ -1620,43 +1583,13 @@ export class MrzResult {
    * Result without additional '<' characters if they exist.
    */
   sanitizedDocumentNumber?: string;
-
-  /**
-   *
-   * @param nativeMrzResult
-   *
-   */
-  constructor(nativeMrzResult: any) {
-    this.rawMRZString = nativeMrzResult.rawMRZString;
-    this.documentCode = nativeMrzResult.documentCode;
-    this.issuer = nativeMrzResult.issuer;
-    this.documentNumber = nativeMrzResult.documentNumber;
-    this.opt1 = nativeMrzResult.opt1;
-    this.opt2 = nativeMrzResult.opt2;
-    this.gender = nativeMrzResult.gender;
-    this.nationality = nativeMrzResult.nationality;
-    this.primaryID = nativeMrzResult.primaryID;
-    this.secondaryID = nativeMrzResult.secondaryID;
-    this.issuerName = nativeMrzResult.issuerName;
-    this.nationalityName = nativeMrzResult.nationalityName;
-    this.verified = nativeMrzResult.verified;
-    this.dateOfBirth = nativeMrzResult.dateOfBirth;
-    this.dateOfExpiry = nativeMrzResult.dateOfExpiry;
-    this.documentType = nativeMrzResult.documentType;
-    this.sanitizedOpt1 = nativeMrzResult.sanitizedOpt1;
-    this.sanitizedOpt2 = nativeMrzResult.sanitizedOpt2;
-    this.sanitizedNationality = nativeMrzResult.sanitizedNationality;
-    this.sanitizedIssuer = nativeMrzResult.sanitizedIssuer;
-    this.sanitizedDocumentCode = nativeMrzResult.sanitizedDocumentCode;
-    this.sanitizedDocumentNumber = nativeMrzResult.sanitizedDocumentNumber;
-  }
-}
+};
 
 /**
  * Represents the data extracted from the barcode.
  *
  */
-export class BarcodeResult {
+export type BarcodeResult = {
   /**
    * The raw, unparsed barcode data.
    *
@@ -1817,50 +1750,13 @@ export class BarcodeResult {
    * Indicates whether the barcode was successfully parsed.
    */
   parsed?: boolean;
-
-  /**
-   *
-   * @param nativeBarcodeResult
-   */
-  constructor(nativeBarcodeResult: any) {
-    this.barcodeData = nativeBarcodeResult.barcodeData;
-    this.firstName = nativeBarcodeResult.firstName;
-    this.middleName = nativeBarcodeResult.middleName;
-    this.lastName = nativeBarcodeResult.lastName;
-    this.fullName = nativeBarcodeResult.fullName;
-    this.additionalNameInformation =
-      nativeBarcodeResult.additionalNameInformation;
-    this.address = nativeBarcodeResult.address;
-    this.placeOfBirth = nativeBarcodeResult.placeOfBirth;
-    this.nationality = nativeBarcodeResult.nationality;
-    this.race = nativeBarcodeResult.race;
-    this.religion = nativeBarcodeResult.religion;
-    this.profession = nativeBarcodeResult.profession;
-    this.maritalStatus = nativeBarcodeResult.maritalStatus;
-    this.residentialStatus = nativeBarcodeResult.residentialStatus;
-    this.employer = nativeBarcodeResult.employer;
-    this.sex = nativeBarcodeResult.sex;
-    this.dateOfBirth = nativeBarcodeResult.dateOfBirth;
-    this.dateOfIssue = nativeBarcodeResult.dateOfIssue;
-    this.dateOfExpiry = nativeBarcodeResult.dateOfExpiry;
-    this.documentNumber = nativeBarcodeResult.documentNumber;
-    this.personalIdNumber = nativeBarcodeResult.personalIdNumber;
-    this.documentAdditionalNumber =
-      nativeBarcodeResult.documentAdditionalNumber;
-    this.issuingAuthority = nativeBarcodeResult.issuingAuthority;
-    this.addressDetailedInfo = nativeBarcodeResult.addressDetailedInfo;
-    this.driverLicenseDetailedInfo =
-      nativeBarcodeResult.driverLicenseDetailedInfo;
-    this.extendedElements = nativeBarcodeResult.extendedElements;
-    this.parsed = nativeBarcodeResult.parsed;
-  }
-}
+};
 
 /**
  * Represents the raw, unparsed data extracted from a scanned barcode.
  *
  */
-export class BarcodeData {
+export type BarcodeData = {
   /**
    * Type of the scanned barcode.
    *
@@ -1884,24 +1780,13 @@ export class BarcodeData {
    *
    */
   uncertain?: boolean;
-
-  /**
-   *
-   * @param nativeBarcodeData - specifies the barcode data obtained from the native SDK.
-   */
-  constructor(nativeBarcodeData: any) {
-    this.barcodeType = nativeBarcodeData.barcodeType;
-    this.rawData = nativeBarcodeData.rawData;
-    this.stringData = nativeBarcodeData.stringData;
-    this.uncertain = nativeBarcodeData.uncertain;
-  }
-}
+};
 
 /**
  * Detailed information about the address.
  *
  */
-export class AddressDetailedInfo {
+export type AddressDetailedInfo = {
   /**
    * he address street portion of the document owner.
    *
@@ -1925,24 +1810,12 @@ export class AddressDetailedInfo {
    *
    */
   jurisdiction?: string;
-
-  /**
-   *
-   * @param nativeAddressDetailedInfo - specificies the address detailed info obtained from the native SDK.
-   *
-   */
-  constructor(nativeAddressDetailedInfo: any) {
-    this.street = nativeAddressDetailedInfo.street;
-    this.postalCode = nativeAddressDetailedInfo.postalCode;
-    this.city = nativeAddressDetailedInfo.city;
-    this.jurisdiction = nativeAddressDetailedInfo.jurisdiction;
-  }
-}
+};
 /**
  * Represents the fields present in the barcode.
  * Currently this is only used for AAMVACompliant documents.
  */
-export class BarcodeExtendedElements {
+export type BarcodeExtendedElements = {
   /**
    * Mandatory on all AAMVA and Magnetic barcodes.
    * On compact barcodes, use kFullAddress.
@@ -2806,136 +2679,12 @@ export class BarcodeExtendedElements {
    *  For example: ANSI 636010090002DL00410267ZF03080067DLDAQS1234567812300000000000000 ^^ |           | |           +-- SubField Designator (DL, ID, EN, etc.) +----- IIN (636010)
    */
   subFieldDesignator?: string;
-
-  /**
-   *
-   * @param nativeBarcodeExtendedElements - specifies the extended barcode elements obtained from the native SDK.
-   */
-  constructor(nativeBarcodeExtendedElements: any) {
-    this.addressCity = nativeBarcodeExtendedElements.addressCity;
-    this.addressJurisdictionCode =
-      nativeBarcodeExtendedElements.addressJurisdictionCode;
-    this.addressPostalCode = nativeBarcodeExtendedElements.addressPostalCode;
-    this.addressStreet = nativeBarcodeExtendedElements.addressStreet;
-    this.addressStreet2 = nativeBarcodeExtendedElements.addressStreet2;
-    this.akaDateOfBirth = nativeBarcodeExtendedElements.akaDateOfBirth;
-    this.akaFamilyName = nativeBarcodeExtendedElements.akaFamilyName;
-    this.akaFullName = nativeBarcodeExtendedElements.akaFullName;
-    this.akaGivenName = nativeBarcodeExtendedElements.akaGivenName;
-    this.akaMiddleName = nativeBarcodeExtendedElements.akaMiddleName;
-    this.akaPrefixName = nativeBarcodeExtendedElements.akaPrefixName;
-    this.akaSocialSecurityNumber =
-      nativeBarcodeExtendedElements.akaSocialSecurityNumber;
-    this.akaSuffixName = nativeBarcodeExtendedElements.akaSuffixName;
-    this.auditInformation = nativeBarcodeExtendedElements.auditInformation;
-    this.cardRevisionDate = nativeBarcodeExtendedElements.cardRevisionDate;
-    this.complianceType = nativeBarcodeExtendedElements.complianceType;
-    this.countryIdentification =
-      nativeBarcodeExtendedElements.countryIdentification;
-    this.customerFamilyName = nativeBarcodeExtendedElements.customerFamilyName;
-    this.customerIdNumber = nativeBarcodeExtendedElements.customerIdNumber;
-    this.customerFirstName = nativeBarcodeExtendedElements.customerFirstName;
-    this.customerFullName = nativeBarcodeExtendedElements.customerFullName;
-    this.customerMiddleName = nativeBarcodeExtendedElements.customerMiddleName;
-    this.dataDiscriminator = nativeBarcodeExtendedElements.dataDiscriminator;
-    this.dateOfBirth = nativeBarcodeExtendedElements.dateOfBirth;
-    this.documentDiscriminator =
-      nativeBarcodeExtendedElements.documentDiscriminator;
-    this.documentExpirationDate =
-      nativeBarcodeExtendedElements.documentExpirationDate;
-    this.documentExpirationMonth =
-      nativeBarcodeExtendedElements.documentExpirationMonth;
-    this.documentIssueDate = nativeBarcodeExtendedElements.documentIssueDate;
-    this.documentNonexpiring =
-      nativeBarcodeExtendedElements.documentNonexpiring;
-    this.documentType = nativeBarcodeExtendedElements.documentType;
-    this.eyeColor = nativeBarcodeExtendedElements.eyeColor;
-    this.familyNameTruncation =
-      nativeBarcodeExtendedElements.familyNameTruncation;
-    this.federalCommercialVehicleCodes =
-      nativeBarcodeExtendedElements.federalCommercialVehicleCodes;
-    this.firstNameTruncation =
-      nativeBarcodeExtendedElements.firstNameTruncation;
-    this.fullAddress = nativeBarcodeExtendedElements.fullAddress;
-    this.hairColor = nativeBarcodeExtendedElements.hairColor;
-    this.height = nativeBarcodeExtendedElements.height;
-    this.heightIn = nativeBarcodeExtendedElements.heightIn;
-    this.heightCm = nativeBarcodeExtendedElements.heightCm;
-    this.issuerIdentificationNumber =
-      nativeBarcodeExtendedElements.issuerIdentificationNumber;
-    this.issuingJurisdiction =
-      nativeBarcodeExtendedElements.issuingJurisdiction;
-    this.issuingJurisdictionName =
-      nativeBarcodeExtendedElements.issuingJurisdictionName;
-    this.jurisdictionEndorsementCodes =
-      nativeBarcodeExtendedElements.jurisdictionEndorsementCodes;
-    this.jurisdictionEndorsmentCodeDescription =
-      nativeBarcodeExtendedElements.jurisdictionEndorsmentCodeDescription;
-    this.jurisdictionRestrictionCodeDescription =
-      nativeBarcodeExtendedElements.jurisdictionRestrictionCodeDescription;
-    this.jurisdictionRestrictionCodes =
-      nativeBarcodeExtendedElements.jurisdictionRestrictionCodes;
-    this.jurisdictionVehicleClass =
-      nativeBarcodeExtendedElements.jurisdictionVehicleClass;
-    this.jurisdictionVehicleClassificationDescription =
-      nativeBarcodeExtendedElements.jurisdictionVehicleClassificationDescription;
-    this.jurisdictionVersionNumber =
-      nativeBarcodeExtendedElements.jurisdictionVersionNumber;
-    this.limitedDurationDocument =
-      nativeBarcodeExtendedElements.limitedDurationDocument;
-    this.medicalIndicator = nativeBarcodeExtendedElements.medicalIndicator;
-    this.middleNameTruncation =
-      nativeBarcodeExtendedElements.middleNameTruncation;
-    this.namePrefix = nativeBarcodeExtendedElements.namePrefix;
-    this.nameSuffix = nativeBarcodeExtendedElements.nameSuffix;
-    this.nonResident = nativeBarcodeExtendedElements.nonResident;
-    this.numberOfDuplicates = nativeBarcodeExtendedElements.numberOfDuplicates;
-    this.organDonor = nativeBarcodeExtendedElements.organDonor;
-    this.permitExpirationDate =
-      nativeBarcodeExtendedElements.permitExpirationDate;
-    this.permitIdentifier = nativeBarcodeExtendedElements.permitIdentifier;
-    this.permitIssueDate = nativeBarcodeExtendedElements.permitIssueDate;
-    this.placeOfBirth = nativeBarcodeExtendedElements.placeOfBirth;
-    this.raceEthnicity = nativeBarcodeExtendedElements.raceEthnicity;
-    this.residenceCity = nativeBarcodeExtendedElements.residenceCity;
-    this.residenceFullAddress =
-      nativeBarcodeExtendedElements.residenceFullAddress;
-    this.residenceJurisdictionCode =
-      nativeBarcodeExtendedElements.residenceJurisdictionCode;
-    this.residencePostalCode =
-      nativeBarcodeExtendedElements.residencePostalCode;
-    this.residenceStreetAddress =
-      nativeBarcodeExtendedElements.residenceStreetAddress;
-    this.residenceStreetAddress2 =
-      nativeBarcodeExtendedElements.residenceStreetAddress2;
-    this.securityVersion = nativeBarcodeExtendedElements.securityVersion;
-    this.sex = nativeBarcodeExtendedElements.sex;
-    this.socialSecurityNumber =
-      nativeBarcodeExtendedElements.socialSecurityNumber;
-    this.standardEndorsementCode =
-      nativeBarcodeExtendedElements.standardEndorsementCode;
-    this.standardRestrictionCode =
-      nativeBarcodeExtendedElements.standardRestrictionCode;
-    this.standardVehicleClassification =
-      nativeBarcodeExtendedElements.standardVehicleClassification;
-    this.standardVersionNumber =
-      nativeBarcodeExtendedElements.standardVersionNumber;
-    this.under18 = nativeBarcodeExtendedElements.under18;
-    this.under19 = nativeBarcodeExtendedElements.under19;
-    this.under21 = nativeBarcodeExtendedElements.under21;
-    this.uniqueCustomerId = nativeBarcodeExtendedElements.uniqueCustomerId;
-    this.veteran = nativeBarcodeExtendedElements.veteran;
-    this.weightKilograms = nativeBarcodeExtendedElements.weightKilograms;
-    this.weightPounds = nativeBarcodeExtendedElements.weightPounds;
-    this.weightRange = nativeBarcodeExtendedElements.weightRange;
-    this.subFieldDesignator = nativeBarcodeExtendedElements.subFieldDesignator;
-  }
-}
+};
 
 /**
  * The results of parents info.
  */
-export class ParentInfo {
+export type ParentInfo = {
   /**
    * The first name of one of the document owner's parents.
    */
@@ -2945,12 +2694,7 @@ export class ParentInfo {
    * The last name of one of the document owner's parents.
    */
   lastName?: StringResult;
-
-  constructor(nativeParentInfo: any) {
-    this.firstName = nativeParentInfo.firstName;
-    this.lastName = nativeParentInfo.lastName;
-  }
-}
+};
 
 /**
  * Represents the mode of document scanning.
@@ -2958,50 +2702,48 @@ export class ParentInfo {
  * This enum class defines whether the scanning process is limited to a single
  * side of the document or includes multiple sides, automatically identifying how many sides need to be scanned.
  */
-export enum ScanningMode {
+export type ScanningMode =
   /**
    * Specifies the scanning process to be for single side only.
    *
    */
-  Single = 0,
+  | "single"
 
   /**
    * The default `ScanningMode`.
    *
    * Automatically determines the number of sides to scan.
    */
-  Automatic = 1,
-}
+  | "automatic";
 
 /**
  * Represents the type of the alphabet used in the document.
  *
  */
-export enum AlphabetType {
+export type AlphabetType =
   /**
    * The Latin alphabet type
    *
    */
-  Latin = "latin",
+  | "latin"
 
   /**
    * The Arabic alphabet type
    *
    */
-  Arabic = "arabic",
+  | "arabic"
 
   /**
    * The Cyrillic alphabet type
    *
    */
-  Cyrillic = "cyrillic",
+  | "cyrillic"
 
   /**
    * The Greek alphabet type
    *
    */
-  Greek = "greek",
-}
+  | "greek";
 
 /**
  * Represents the different levels of detection sensitivity.
@@ -3012,1530 +2754,1480 @@ export enum AlphabetType {
  * The levels range from turning detection
  * off completely to setting various levels of sensitivity (`Low`, `Mid`, `High`).
  */
-export enum DetectionLevel {
+export type SensitivityLevel =
   /**
    * Disables the `DetectionLevel`
    *
    */
-  Off = 0,
+  | "off"
 
   /**
    * Sets the `DetectionLevel` to be less sensitive.
    *
    */
-  Low = 1,
+  | "low"
 
   /**
    * The default `DetectionLevel` sensitivity.
    *
    */
-  Mid = 2,
+  | "mid"
 
   /**
    * Sets the `DetectionLevel` to be highly sensitive.
    *
    */
-  High = 3,
-}
+  | "high";
 
 /**
  * Represents level of anonymization performed on the scanning result.
  *
  */
-export enum AnonymizationMode {
+export type RedactionMode =
   /**
    * Anonymization will not be performed.
    *
    */
-  None = "none",
+  | "none"
 
   /**
    * Full document image is anonymized with black boxes covering sensitive data.
    *
    */
-  ImageOnly = "imageOnly",
+  | "imageOnly"
 
   /**
    * Result fields containing sensitive data are removed from result.
    *
    */
-  ResultFieldsOnly = "resultFieldsOnly",
+  | "resultFieldsOnly"
 
   /**
    * This mode is combination of `imageOnly` and `resultFieldsOnly` modes.
    *
    */
-  FullResult = "fullResult",
-}
-
-/**
- * Represents possible recognition modes.
- *
- */
-export const enum RecognitionMode {
-  /**
-   * No recognition performed.
-   *
-   */
-  None = "none",
-
-  /**
-   * Recognition of mrz document (does not include visa and passport).
-   *
-   */
-  MrzId = "mrzId",
-
-  /**
-   * Recognition of visa mrz.
-   *
-   */
-  MrzVisa = "mrzVisa",
-
-  /**
-   * Recognition of passport mrz.
-   *
-   */
-
-  MrzPassport = "mrzPassport",
-
-  /*
-   * Recognition of documents that have face photo on the front.
-   *
-   */
-  PhotoId = "photoId",
-
-  /**
-   * Detailed document recognition.
-   *
-   */
-  FullRecognition = "fullRecognition",
-
-  /**
-   * Recognition of barcode document.
-   *
-   */
-  BarcodeId = "barcodeId",
-}
+  | "fullResult";
 
 /**
  * Define document side where the document field is located.
  *
  */
-export enum DocumentSide {
+export type DocumentSide =
   /**
    * The field is located on the front side of the document
    *
    */
-  Front = 0,
+  | "front"
 
   /**
    * The field is located on the back side of the document
    *
    */
-  Back = 1,
-}
+  | "back";
 
 /**
  * Represents the type of scanned barcode
  *
  */
-export enum BarcodeType {
+export type BarcodeType =
   /**
    * No barcode was scanned
    *
    */
-  None = 0,
+  | "none"
 
   /**
    * QR code was scanned
    *
    */
-  QrCode = 1,
+  | "qrCode"
 
   /**
    * Data Matrix 2D barcode was scanned
    *
    */
-  DataMatrix = 2,
+  | "dataMatrix"
 
   /**
    * UPC E barcode was scanned
    *
    */
-  Upce = 3,
+  | "upce"
 
   /**
    * UPC A barcode was scanned
    *
    */
-  Upca = 4,
+  | "upca"
 
   /**
    * EAN 8 barcode was scanned
    *
    */
-  Ean8 = 5,
+  | "ean8"
 
   /**
    * EAN 13 barcode was scanned
    *
    */
-  Ean13 = 6,
+  | "ean13"
 
   /**
    * Code 128 barcode was scanned
    *
    */
-  Code128 = 7,
+  | "code128"
 
   /**
    * Code 39 barcode was scanned
    *
    */
-  Code39 = 8,
+  | "code39"
 
   /**
    * ITF barcode was scanned
    *
    */
-  Itf = 9,
+  | "itf"
 
   /**
    * Aztec 2D barcode was scanned
    *
    */
-  Aztec = 10,
+  | "aztec"
 
   /**
    * PDF417 2D barcode was scanned
    *
    */
-  Pdf417 = 11,
-}
+  | "pdf417";
 
 /**
  * Represents the document type found on the Machine Readable Zone
  *
  */
-export enum MRZDocumentType {
+export type MRZDocumentType =
   /**
    * Document type was not identified.
    *
    */
-  Unknown = 0,
+  | "unknown"
 
   /**
    * Identity card
    *
    */
-  IdentityCard = 1,
+  | "identityCard"
 
   /**
    * Passport
    *
    */
-  Passport = 2,
+  | "passport"
 
   /**
    * VISA
    *
    */
-  Visa = 3,
+  | "visa"
 
   /**
    * Green card
    *
    */
-  GreenCard = 4,
+  | "greenCard"
 
   /**
    * IIM13P Pass
    *
    */
-  MysPassIMM13P = 5,
+  | "mysPassIMM13P"
 
   /**
    * Driver license
    *
    */
-  DriverLicense = 6,
+  | "driverLicense"
 
   /**
    * Internal travel document
    *
    */
-  InternalTravelDocument = 7,
+  | "internalTravelDocument"
 
   /**
    * Border crossing card
    *
    */
-  BorderCrossingCard = 8,
-}
+  | "borderCrossingCard";
 
 /**
  * Represents the side of the document being scanned.
  *
  */
-enum ScanningSide {
+export type ScanningSide =
   /**
    * The first side of the scanned document
    *
    */
-  First = 0,
+  | "first"
 
   /**
    * The second side of the scanned document
    *
    */
-  Second = 1,
-}
+  | "second";
 
 /**
  * Represents the type of the field used in data match.
  *
  */
-export enum DataMatchField {
+export type DataMatchField =
   /**
    * The date of birth field.
    *
    */
-  DateOfBirth = 0,
+  | "dateOfBirth"
 
   /**
    * The date of expiry field.
    *
    */
-  DateOfExpiry = 1,
+  | "dateOfExpiry"
 
   /**
    * The document number field.
    *
    */
-  DocumentNumber = 2,
+  | "documentNumber"
 
   /**
    * The document additional number field.
    *
    */
-  DocumentAdditionalNumber = 3,
+  | "DocumentAdditionalNumber"
 
   /**
    * The document optional additional number field.
    *
    */
-  DocumentOptionalAdditionalNumber = 4,
+  | "documentOptionalAdditionalNumber"
 
   /**
    * The personal ID number field.
    *
    */
-
-  PersonalIdNumber = 5,
-}
+  | "personalIdNumber";
 
 /**
  * Represents the state of the data match.
  *
  */
-export enum DataMatchState {
+export type DataMatchState =
   /**
    * Data matching has not been performed.
    *
    */
-  NotPerformed = 0,
+  | "notPerformed"
 
   /**
    * Data does not match.
    *
    */
-  Failed = 1,
+  | "failed"
 
   /**
    * Data does match.
    *
    */
-  Success = 2,
-}
+  | "success";
 
 /**
  * Document country.
  *
  */
-export enum Country {
-  None = "none",
+export const Country = {
+  None: "none",
 
-  Albania = "albania",
+  Albania: "albania",
 
-  Algeria = "algeria",
+  Algeria: "algeria",
 
-  Argentina = "argentina",
+  Argentina: "argentina",
 
-  Australia = "australia",
+  Australia: "australia",
 
-  Austria = "austria",
+  Austria: "austria",
 
-  Azerbaijan = "azerbaijan",
+  Azerbaijan: "azerbaijan",
 
-  Bahrain = "bahrain",
+  Bahrain: "bahrain",
 
-  Bangladesh = "bangladesh",
+  Bangladesh: "bangladesh",
 
-  Belgium = "belgium",
+  Belgium: "belgium",
 
-  BosniaAndHerzegovina = "bosniaAndHerzegovina",
+  BosniaAndHerzegovina: "bosniaAndHerzegovina",
 
-  Brunei = "brunei",
+  Brunei: "brunei",
 
-  Bulgaria = "bulgaria",
+  Bulgaria: "bulgaria",
 
-  Bambodia = "bambodia",
+  Bambodia: "bambodia",
 
-  Canada = "canada",
+  Canada: "canada",
 
-  Chile = "chile",
+  Chile: "chile",
 
-  Colombia = "colombia",
+  Colombia: "colombia",
 
-  CostaRica = "costaRica",
+  CostaRica: "costaRica",
 
-  Croatia = "croatia",
+  Croatia: "croatia",
 
-  Cyprus = "cyprus",
+  Cyprus: "cyprus",
 
-  Czechia = "czechia",
+  Czechia: "czechia",
 
-  Denmark = "denmark",
+  Denmark: "denmark",
 
-  DominicanRepublic = "dominicanRepublic",
+  DominicanRepublic: "dominicanRepublic",
 
-  Egypt = "egypt",
+  Egypt: "egypt",
 
-  Estonia = "estonia",
+  Estonia: "estonia",
 
-  Finland = "finland",
+  Finland: "finland",
 
-  France = "france",
+  France: "france",
 
-  Georgia = "georgia",
+  Georgia: "georgia",
 
-  Germany = "germany",
+  Germany: "germany",
 
-  Ghana = "ghana",
+  Ghana: "ghana",
 
-  Greece = "greece",
+  Greece: "greece",
 
-  Guatemala = "guatemala",
+  Guatemala: "guatemala",
 
-  HongKong = "hongKong",
+  HongKong: "hongKong",
 
-  Hungary = "hungary",
+  Hungary: "hungary",
 
-  India = "india",
+  India: "india",
 
-  Indonesia = "indonesia",
+  Indonesia: "indonesia",
 
-  Ireland = "ireland",
+  Ireland: "ireland",
 
-  Israel = "israel",
+  Israel: "israel",
 
-  Italy = "italy",
+  Italy: "italy",
 
-  Jordan = "jordan",
+  Jordan: "jordan",
 
-  Kazakhstan = "kazakhstan",
+  Kazakhstan: "kazakhstan",
 
-  Kenya = "kenya",
+  Kenya: "kenya",
 
-  Kosovo = "kosovo",
+  Kosovo: "kosovo",
 
-  Kuwait = "kuwait",
+  Kuwait: "kuwait",
 
-  Latvia = "latvia",
+  Latvia: "latvia",
 
-  Lithuania = "lithuania",
+  Lithuania: "lithuania",
 
-  Malaysia = "malaysia",
+  Malaysia: "malaysia",
 
-  Maldives = "maldives",
+  Maldives: "maldives",
 
-  Malta = "malta",
+  Malta: "malta",
 
-  Mauritius = "mauritius",
+  Mauritius: "mauritius",
 
-  Mexico = "mexico",
+  Mexico: "mexico",
 
-  Morocco = "morocco",
+  Morocco: "morocco",
 
-  Netherlands = "netherlands",
+  Netherlands: "netherlands",
 
-  NewZealand = "newZealand",
+  NewZealand: "newZealand",
 
-  Nigeria = "nigeria",
+  Nigeria: "nigeria",
 
-  Pakistan = "pakistan",
+  Pakistan: "pakistan",
 
-  Panama = "panama",
+  Panama: "panama",
 
-  Paraguay = "paraguay",
+  Paraguay: "paraguay",
 
-  Philippines = "philippines",
+  Philippines: "philippines",
 
-  Poland = "poland",
+  Poland: "poland",
 
-  Portugal = "portugal",
+  Portugal: "portugal",
 
-  PuertoRico = "puertoRico",
+  PuertoRico: "puertoRico",
 
-  Qatar = "qatar",
+  Qatar: "qatar",
 
-  Romania = "romania",
+  Romania: "romania",
 
-  Russia = "russia",
+  Russia: "russia",
 
-  SaudiArabia = "saudiArabia",
+  SaudiArabia: "saudiArabia",
 
-  Serbia = "serbia",
+  Serbia: "serbia",
 
-  Singapore = "singapore",
+  Singapore: "singapore",
 
-  Slovakia = "slovakia",
+  Slovakia: "slovakia",
 
-  Slovenia = "slovenia",
+  Slovenia: "slovenia",
 
-  SouthAfrica = "southAfrica",
+  SouthAfrica: "southAfrica",
 
-  Spain = "spain",
+  Spain: "spain",
 
-  Sweden = "sweden",
+  Sweden: "sweden",
 
-  Switzerland = "switzerland",
+  Switzerland: "switzerland",
 
-  Taiwan = "taiwan",
+  Taiwan: "taiwan",
 
-  Thailand = "thailand",
+  Thailand: "thailand",
 
-  Tunisia = "tunisia",
+  Tunisia: "tunisia",
 
-  Turkey = "turkey",
+  Turkey: "turkey",
 
-  UAE = "uae",
+  UAE: "uae",
 
-  Ganda = "gganda",
+  Ganda: "gganda",
 
-  UK = "uk",
+  UK: "uk",
 
-  Ukraine = "ukraine",
+  Ukraine: "ukraine",
 
-  USA = "usa",
+  USA: "usa",
 
-  Vietnam = "vietnam",
+  Vietnam: "vietnam",
 
-  Brazil = "brazil",
+  Brazil: "brazil",
 
-  Norway = "norway",
+  Norway: "norway",
 
-  Oman = "oman",
+  Oman: "oman",
 
-  Ecuador = "ecuador",
+  Ecuador: "ecuador",
 
-  ElSalvador = "elSalvador",
+  ElSalvador: "elSalvador",
 
-  SriLanka = "sriLanka",
+  SriLanka: "sriLanka",
 
-  Peru = "peru",
+  Peru: "peru",
 
-  Uruguay = "uruguay",
+  Uruguay: "uruguay",
 
-  Bahamas = "bahamas",
+  Bahamas: "bahamas",
 
-  Bermuda = "bermuda",
+  Bermuda: "bermuda",
 
-  Bolivia = "bolivia",
+  Bolivia: "bolivia",
 
-  China = "china",
+  China: "china",
 
-  EuropeanUnion = "europeanUnion",
+  EuropeanUnion: "europeanUnion",
 
-  Haiti = "haiti",
+  Haiti: "haiti",
 
-  Honduras = "honduras",
+  Honduras: "honduras",
 
-  Iceland = "iceland",
+  Iceland: "iceland",
 
-  Japan = "japan",
+  Japan: "japan",
 
-  Luxembourg = "luxembourg",
+  Luxembourg: "luxembourg",
 
-  Montenegro = "montenegro",
+  Montenegro: "montenegro",
 
-  Nicaragua = "nicaragua",
+  Nicaragua: "nicaragua",
 
-  SouthKorea = "southKorea",
+  SouthKorea: "southKorea",
 
-  Venezuela = "venezuela",
+  Venezuela: "venezuela",
 
-  Afghanistan = "afghanistan",
+  Afghanistan: "afghanistan",
 
-  AlandIslands = "alandIslands",
+  AlandIslands: "alandIslands",
 
-  AmericanSamoa = "americanSamoa",
+  AmericanSamoa: "americanSamoa",
 
-  Andorra = "andorra",
+  Andorra: "andorra",
 
-  Angola = "angola",
+  Angola: "angola",
 
-  Anguilla = "anguilla",
+  Anguilla: "anguilla",
 
-  Antartica = "antarctica",
+  Antartica: "antarctica",
 
-  AntiguaAndBarbuda = "antiguaAndBarbuda",
+  AntiguaAndBarbuda: "antiguaAndBarbuda",
 
-  Armenia = "armenia",
+  Armenia: "armenia",
 
-  Aruba = "aruba",
+  Aruba: "aruba",
 
-  BailiwickOfGuernsey = "bailiwickOfGuernsey",
+  BailiwickOfGuernsey: "bailiwickOfGuernsey",
 
-  BailiwickOfJersey = "bailiwickOfJersey",
+  BailiwickOfJersey: "bailiwickOfJersey",
 
-  Barbados = "barbados",
+  Barbados: "barbados",
 
-  Belarus = "belarus",
+  Belarus: "belarus",
 
-  Belize = "belize",
+  Belize: "belize",
 
-  Benin = "benin",
+  Benin: "benin",
 
-  Bhutan = "bhutan",
+  Bhutan: "bhutan",
 
-  BonaireSaintEustatiusAndSaba = "bonaireSaintEustatiusAndSaba",
+  BonaireSaintEustatiusAndSaba: "bonaireSaintEustatiusAndSaba",
 
-  Botswana = "botswana",
+  Botswana: "botswana",
 
-  BouvetIsland = "bouvetIsland",
+  BouvetIsland: "bouvetIsland",
 
-  BritishIndianOceanTerritory = "britishIndianOceanTerritory",
+  BritishIndianOceanTerritory: "britishIndianOceanTerritory",
 
-  BurkinaFaso = "burkinaFaso",
+  BurkinaFaso: "burkinaFaso",
 
-  Burundi = "burundi",
+  Burundi: "burundi",
 
-  Cameroon = "cameroon",
+  Cameroon: "cameroon",
 
-  CapeVerde = "capeVerde",
+  CapeVerde: "capeVerde",
 
-  CaribbeanNetherlands = "caribbeanNetherlands",
+  CaribbeanNetherlands: "caribbeanNetherlands",
 
-  CaymanIslands = "caymanIslands",
+  CaymanIslands: "caymanIslands",
 
-  CentralAfricanRepublic = "centralAfricanRepublic",
+  CentralAfricanRepublic: "centralAfricanRepublic",
 
-  Chad = "chad",
+  Chad: "chad",
 
-  ChristmasIsland = "christmasIsland",
+  ChristmasIsland: "christmasIsland",
 
-  CocosIslands = "cocosIslands",
+  CocosIslands: "cocosIslands",
 
-  Comoros = "comoros",
+  Comoros: "comoros",
 
-  Congo = "congo",
+  Congo: "congo",
 
-  CookIslands = "cookIslands",
+  CookIslands: "cookIslands",
 
-  Cuba = "cuba",
+  Cuba: "cuba",
 
-  Curacao = "curacao",
+  Curacao: "curacao",
 
-  DemocraticRepublicOfTheCongo = "democraticRepublicOfTheCongo",
+  DemocraticRepublicOfTheCongo: "democraticRepublicOfTheCongo",
 
-  Djibouti = "djibouti",
+  Djibouti: "djibouti",
 
-  Dominica = "dominica",
+  Dominica: "dominica",
 
-  EastTimor = "eastTimor",
+  EastTimor: "eastTimor",
 
-  EquatorialGuinea = "equatorialGuinea",
+  EquatorialGuinea: "equatorialGuinea",
 
-  Eritrea = "eritrea",
+  Eritrea: "eritrea",
 
-  Ethiopia = "ethiopia",
+  Ethiopia: "ethiopia",
 
-  FalklandIslands = "falklandIslands",
+  FalklandIslands: "falklandIslands",
 
-  FaroeIslands = "faroeIslands",
+  FaroeIslands: "faroeIslands",
 
-  FederatedStatesOfMicronesia = "federatedStatesOfMicronesia",
+  FederatedStatesOfMicronesia: "federatedStatesOfMicronesia",
 
-  Fiji = "fiji",
+  Fiji: "fiji",
 
-  FrenchGuiana = "frenchGuiana",
+  FrenchGuiana: "frenchGuiana",
 
-  FrenchPolynesia = "frenchPolynesia",
+  FrenchPolynesia: "frenchPolynesia",
 
-  FrenchSouthernTerritories = "frenchSouthernTerritories",
+  FrenchSouthernTerritories: "frenchSouthernTerritories",
 
-  Gabon = "gabon",
+  Gabon: "gabon",
 
-  Gambia = "gambia",
+  Gambia: "gambia",
 
-  Gibraltar = "gibraltar",
+  Gibraltar: "gibraltar",
 
-  Greenland = "greenland",
+  Greenland: "greenland",
 
-  Grenada = "grenada",
+  Grenada: "grenada",
 
-  Guadeloupe = "guadeloupe",
+  Guadeloupe: "guadeloupe",
 
-  Guam = "guam",
+  Guam: "guam",
 
-  Guinea = "guinea",
+  Guinea: "guinea",
 
-  GuineaBissau = "guineaBissau",
+  GuineaBissau: "guineaBissau",
 
-  Guyana = "guyana",
+  Guyana: "guyana",
 
-  HeardIslandAndMcdonaldIslands = "heardIslandAndMcdonaldIslands",
+  HeardIslandAndMcdonaldIslands: "heardIslandAndMcdonaldIslands",
 
-  Iran = "iran",
+  Iran: "iran",
 
-  Iraq = "iraq",
+  Iraq: "iraq",
 
-  IsleOfMan = "isleOfMan",
+  IsleOfMan: "isleOfMan",
 
-  IvoryCoast = "ivoryCoast",
+  IvoryCoast: "ivoryCoast",
 
-  Jamaica = "jamaica",
+  Jamaica: "jamaica",
 
-  Kiribati = "kiribati",
+  Kiribati: "kiribati",
 
-  Kyrgyzstan = "kyrgyzstan",
+  Kyrgyzstan: "kyrgyzstan",
 
-  Laos = "laos",
+  Laos: "laos",
 
-  Lebanon = "lebanon",
+  Lebanon: "lebanon",
 
-  Lesotho = "lesotho",
+  Lesotho: "lesotho",
 
-  Liberia = "liberia",
+  Liberia: "liberia",
 
-  Libya = "libya",
+  Libya: "libya",
 
-  Liechtenstein = "liechtenstein",
+  Liechtenstein: "liechtenstein",
 
-  Macau = "macau",
+  Macau: "macau",
 
-  Madagascar = "madagascar",
+  Madagascar: "madagascar",
 
-  Malawi = "malawi",
+  Malawi: "malawi",
 
-  Mali = "mali",
+  Mali: "mali",
 
-  MarshallIslands = "marshallIslands",
+  MarshallIslands: "marshallIslands",
 
-  Martinique = "martinique",
+  Martinique: "martinique",
 
-  Mauritania = "mauritania",
+  Mauritania: "mauritania",
 
-  Mayotte = "mayotte",
+  Mayotte: "mayotte",
 
-  Moldova = "moldova",
+  Moldova: "moldova",
 
-  Monaco = "monaco",
+  Monaco: "monaco",
 
-  Mongolia = "mongolia",
+  Mongolia: "mongolia",
 
-  Montserrat = "montserrat",
+  Montserrat: "montserrat",
 
-  Mozambique = "mozambique",
+  Mozambique: "mozambique",
 
-  Myanmar = "myanmar",
+  Myanmar: "myanmar",
 
-  Namibia = "namibia",
+  Namibia: "namibia",
 
-  Nauru = "nauru",
+  Nauru: "nauru",
 
-  Nepal = "nepal",
+  Nepal: "nepal",
 
-  NewCaledonia = "newCaledonia",
+  NewCaledonia: "newCaledonia",
 
-  Niger = "niger",
+  Niger: "niger",
 
-  Niue = "niue",
+  Niue: "niue",
 
-  NorfolkIsland = "norfolkIsland",
+  NorfolkIsland: "norfolkIsland",
 
-  NorthernCyprus = "northernCyprus",
+  NorthernCyprus: "northernCyprus",
 
-  NorthernMarianaIslands = "northernMarianaIslands",
+  NorthernMarianaIslands: "northernMarianaIslands",
 
-  NorthKorea = "northKorea",
+  NorthKorea: "northKorea",
 
-  NorthMacedonia = "northMacedonia",
+  NorthMacedonia: "northMacedonia",
 
-  Palau = "palau",
+  Palau: "palau",
 
-  Palestine = "palestine",
+  Palestine: "palestine",
 
-  PapuaNewGuinea = "papuaNewGuinea",
+  PapuaNewGuinea: "papuaNewGuinea",
 
-  Pitcairn = "pitcairn",
+  Pitcairn: "pitcairn",
 
-  Reunion = "reunion",
+  Reunion: "reunion",
 
-  Rwanda = "rwanda",
+  Rwanda: "rwanda",
 
-  SaintBarthelemy = "saintBarthelemy",
+  SaintBarthelemy: "saintBarthelemy",
 
-  SaintHelenaAscensionAndTristianDaCunha = "saintHelenaAscensionAndTristianDaCunha",
+  SaintHelenaAscensionAndTristianDaCunha:
+    "saintHelenaAscensionAndTristianDaCunha",
 
-  SaintKittsAndNevis = "saintKittsAndNevis",
+  SaintKittsAndNevis: "saintKittsAndNevis",
 
-  SaintLucia = "saintLucia",
+  SaintLucia: "saintLucia",
 
-  SaintMartin = "saintMartin",
+  SaintMartin: "saintMartin",
 
-  SaintPierreAndMiquelon = "saintPierreAndMiquelon",
+  SaintPierreAndMiquelon: "saintPierreAndMiquelon",
 
-  SaintVincentAndTheGrenadines = "saintVincentAndTheGrenadines",
+  SaintVincentAndTheGrenadines: "saintVincentAndTheGrenadines",
 
-  Samoa = "samoa",
+  Samoa: "samoa",
 
-  SanMarino = "sanMarino",
+  SanMarino: "sanMarino",
 
-  SaoTomeAndPrincipe = "saoTomeAndPrincipe",
+  SaoTomeAndPrincipe: "saoTomeAndPrincipe",
 
-  Senegal = "senegal",
+  Senegal: "senegal",
 
-  Seychelles = "seychelles",
+  Seychelles: "seychelles",
 
-  SierraLeone = "sierraLeone",
+  SierraLeone: "sierraLeone",
 
-  SintMaarten = "sintMaarten",
+  SintMaarten: "sintMaarten",
 
-  SolomonIslands = "solomonIslands",
+  SolomonIslands: "solomonIslands",
 
-  Somalia = "somalia",
+  Somalia: "somalia",
 
-  SouthGeorgiaAndTheSouthSandwichIslands = "southGeorgiaAndTheSouthSandwichIslands",
+  SouthGeorgiaAndTheSouthSandwichIslands:
+    "southGeorgiaAndTheSouthSandwichIslands",
 
-  SouthSudan = "southSudan",
+  SouthSudan: "southSudan",
 
-  Sudan = "sudan",
+  Sudan: "sudan",
 
-  Suriname = "suriname",
+  Suriname: "suriname",
 
-  SvalbardAndJanMayen = "svalbardAndJanMayen",
+  SvalbardAndJanMayen: "svalbardAndJanMayen",
 
-  Eswatini = "eswatini",
+  Eswatini: "eswatini",
 
-  Syria = "syria",
+  Syria: "syria",
 
-  Tajikistan = "tajikistan",
+  Tajikistan: "tajikistan",
 
-  Tanzania = "tanzania",
+  Tanzania: "tanzania",
 
-  Togo = "togo",
+  Togo: "togo",
 
-  Tokelau = "tokelau",
+  Tokelau: "tokelau",
 
-  Tonga = "tonga",
+  Tonga: "tonga",
 
-  TrinidadAndTobago = "trinidadAndTobago",
+  TrinidadAndTobago: "trinidadAndTobago",
 
-  Turkmenistan = "turkmenistan",
+  Turkmenistan: "turkmenistan",
 
-  TurksAndCaicosIslands = "turksAndCaicosIslands",
+  TurksAndCaicosIslands: "turksAndCaicosIslands",
 
-  Tuvalu = "tuvalu",
+  Tuvalu: "tuvalu",
 
-  UnitedStatesMinorOutlyingIslands = "unitedStatesMinorOutlyingIslands",
+  UnitedStatesMinorOutlyingIslands: "unitedStatesMinorOutlyingIslands",
 
-  Uzbekistan = "uzbekistan",
+  Uzbekistan: "uzbekistan",
 
-  Vanuatu = "vanuatu",
+  Vanuatu: "vanuatu",
 
-  VaticanCity = "vaticanCity",
+  VaticanCity: "vaticanCity",
 
-  VirginIslandsBritish = "virginIslandsBritish",
+  VirginIslandsBritish: "virginIslandsBritish",
 
-  VirginIslandsUs = "virginIslandsUs",
+  VirginIslandsOfTheUnitedStates: "virginIslandsOfTheUnitedStates",
 
-  WallisAndFutuna = "wallisAndFutuna",
+  WallisAndFutuna: "wallisAndFutuna",
 
-  WesternSahara = "westernSahara",
+  WesternSahara: "westernSahara",
 
-  Yemen = "yemen",
+  Yemen: "yemen",
 
-  Yugoslavia = "yugoslavia",
+  Yugoslavia: "yugoslavia",
 
-  Zambia = "zambia",
+  Zambia: "zambia",
 
-  Zimbabwe = "zimbabwe",
+  Zimbabwe: "zimbabwe",
 
-  SchengenArea = "schengenArea",
+  SchengenArea: "schengenArea",
 
-  SaintThomasAndPrince = "saintThomasAndPrince",
-}
+  SaintThomasAndPrince: "saintThomasAndPrince",
+} as const;
+
+export type Country = (typeof Country)[keyof typeof Country];
+
 /**
  * Document region.
  */
-export enum Region {
-  None = "none",
+export const Region = {
+  None: "none",
 
-  Alabama = "alabama",
+  Alabama: "alabama",
 
-  Alaska = "alaska",
+  Alaska: "alaska",
 
-  Alberta = "alberta",
+  Alberta: "alberta",
 
-  Arizona = "arizona",
+  Arizona: "arizona",
 
-  Arkansas = "arkansas",
+  Arkansas: "arkansas",
 
-  AustralianCapitalTerritory = "australianCapitalTerritory",
+  AustralianCapitalTerritory: "australianCapitalTerritory",
 
-  BritishColumbia = "britishColumbia",
+  BritishColumbia: "britishColumbia",
 
-  California = "california",
+  California: "california",
 
-  Colorado = "colorado",
+  Colorado: "colorado",
 
-  Connecticut = "connecticut",
+  Connecticut: "connecticut",
 
-  Delaware = "delaware",
+  Delaware: "delaware",
 
-  DistrictOfColumbia = "districtOfColumbia",
+  DistrictOfColumbia: "districtOfColumbia",
 
-  Florida = "florida",
+  Florida: "florida",
 
-  Georgia = "georgia",
+  Georgia: "georgia",
 
-  Hawaii = "hawaii",
+  Hawaii: "hawaii",
 
-  Idaho = "idaho",
+  Idaho: "idaho",
 
-  Illinois = "illinois",
+  Illinois: "illinois",
 
-  Indiana = "indiana",
+  Indiana: "indiana",
 
-  Iowa = "iowa",
+  Iowa: "iowa",
 
-  Kansas = "kansas",
+  Kansas: "kansas",
 
-  Kentucky = "kentucky",
+  Kentucky: "kentucky",
 
-  Louisiana = "louisiana",
+  Louisiana: "louisiana",
 
-  Maine = "maine",
+  Maine: "maine",
 
-  Manitoba = "manitoba",
+  Manitoba: "manitoba",
 
-  Maryland = "maryland",
+  Maryland: "maryland",
 
-  Massachusetts = "massachusetts",
+  Massachusetts: "massachusetts",
 
-  Michigan = "michigan",
+  Michigan: "michigan",
 
-  Minnesota = "minnesota",
+  Minnesota: "minnesota",
 
-  Mississippi = "mississippi",
+  Mississippi: "mississippi",
 
-  Missouri = "missouri",
+  Missouri: "missouri",
 
-  Montana = "montana",
+  Montana: "montana",
 
-  Nebraska = "nebraska",
+  Nebraska: "nebraska",
 
-  Nevada = "nevada",
+  Nevada: "nevada",
 
-  NewBrunswick = "newBrunswick",
+  NewBrunswick: "newBrunswick",
 
-  NewHampshire = "newHampshire",
+  NewHampshire: "newHampshire",
 
-  NewJersey = "newJersey",
+  NewJersey: "newJersey",
 
-  NewMexico = "newMexico",
+  NewMexico: "newMexico",
 
-  NewSouthWales = "newSouthWales",
+  NewSouthWales: "newSouthWales",
 
-  NewYork = "newYork",
+  NewYork: "newYork",
 
-  NorthernTerritory = "northernTerritory",
+  NorthernTerritory: "northernTerritory",
 
-  NorthCarolina = "northCarolina",
+  NorthCarolina: "northCarolina",
 
-  NorthDakota = "northDakota",
+  NorthDakota: "northDakota",
 
-  NovaScotia = "novaScotia",
+  NovaScotia: "novaScotia",
 
-  Ohio = "ohio",
+  Ohio: "ohio",
 
-  Oklahoma = "oklahoma",
+  Oklahoma: "oklahoma",
 
-  Ontario = "ontario",
+  Ontario: "ontario",
 
-  Oregon = "oregon",
+  Oregon: "oregon",
 
-  Pennsylvania = "pennsylvania",
+  Pennsylvania: "pennsylvania",
 
-  Quebec = "quebec",
+  Quebec: "quebec",
 
-  Queensland = "queensland",
+  Queensland: "queensland",
 
-  RhodeIsland = "rhodeIsland",
+  RhodeIsland: "rhodeIsland",
 
-  Saskatchewan = "saskatchewan",
+  Saskatchewan: "saskatchewan",
 
-  SouthAustralia = "southAustralia",
+  SouthAustralia: "southAustralia",
 
-  SouthCarolina = "southCarolina",
+  SouthCarolina: "southCarolina",
 
-  SouthDakota = "southDakota",
+  SouthDakota: "southDakota",
 
-  Tasmania = "tasmania",
+  Tasmania: "tasmania",
 
-  Tennessee = "tennessee",
+  Tennessee: "tennessee",
 
-  Texas = "texas",
+  Texas: "texas",
 
-  Utah = "utah",
+  Utah: "utah",
 
-  Vermont = "vermont",
+  Vermont: "vermont",
 
-  Victoria = "victoria",
+  Victoria: "victoria",
 
-  Virginia = "virginia",
+  Virginia: "virginia",
 
-  Washington = "washington",
+  Washington: "washington",
 
-  WesternAustralia = "westernAustralia",
+  WesternAustralia: "westernAustralia",
 
-  WestVirginia = "westVirginia",
+  WestVirginia: "westVirginia",
 
-  Wisconsin = "wisconsin",
+  Wisconsin: "wisconsin",
 
-  Wyoming = "wyoming",
+  Wyoming: "wyoming",
 
-  Yukon = "yukon",
+  Yukon: "yukon",
 
-  CiudadDeMexico = "ciudadDeMexico",
+  CiudadDeMexico: "ciudadDeMexico",
 
-  Jalisco = "jalisco",
+  Jalisco: "jalisco",
 
-  NewfoundlandAndLabrador = "newfoundlandAndLabrador",
+  NewfoundlandAndLabrador: "newfoundlandAndLabrador",
 
-  NuevoLeon = "nuevoLeon",
+  NuevoLeon: "nuevoLeon",
 
-  BajaCalifornia = "bajaCalifornia",
+  BajaCalifornia: "bajaCalifornia",
 
-  Chihuahua = "chihuahua",
+  Chihuahua: "chihuahua",
 
-  Guanajuato = "guanajuato",
+  Guanajuato: "guanajuato",
 
-  Guerrero = "guerrero",
+  Guerrero: "guerrero",
 
-  Mexico = "mexico",
+  Mexico: "mexico",
 
-  Michoacan = "michoacan",
+  Michoacan: "michoacan",
 
-  NewYorkCity = "newYorkCity",
+  NewYorkCity: "newYorkCity",
 
-  Tamaulipas = "tamaulipas",
+  Tamaulipas: "tamaulipas",
 
-  Veracruz = "veracruz",
+  Veracruz: "veracruz",
 
-  Chiapas = "chiapas",
+  Chiapas: "chiapas",
 
-  Coahuila = "coahuila",
+  Coahuila: "coahuila",
 
-  Durago = "durango",
+  Durago: "durango",
 
-  GuerreroCocula = "guerreroCocula",
+  GuerreroCocula: "guerreroCocula",
 
-  GuerreroJuchitan = "guerreroJuchitan",
+  GuerreroJuchitan: "guerreroJuchitan",
 
-  GuerreroTepecoacuilco = "guerreroTepecoacuilco",
+  GuerreroTepecoacuilco: "guerreroTepecoacuilco",
 
-  GuerreroTlacoapa = "guerreroTlacoapa",
+  GuerreroTlacoapa: "guerreroTlacoapa",
 
-  Gujarat = "gujarat",
+  Gujarat: "gujarat",
 
-  Hidalgo = "hidalgo",
+  Hidalgo: "hidalgo",
 
-  Karnataka = "karnataka",
+  Karnataka: "karnataka",
 
-  Kerala = "kerala",
+  Kerala: "kerala",
 
-  KhyberPakhtunkhwa = "khyberPakhtunkhwa",
+  KhyberPakhtunkhwa: "khyberPakhtunkhwa",
 
-  MadhyaPradesh = "madhyaPradesh",
+  MadhyaPradesh: "madhyaPradesh",
 
-  Maharashtra = "maharashtra",
+  Maharashtra: "maharashtra",
 
-  Morelos = "morelos",
+  Morelos: "morelos",
 
-  Nayarit = "nayarit",
+  Nayarit: "nayarit",
 
-  Oaxaca = "oaxaca",
+  Oaxaca: "oaxaca",
 
-  Puebla = "puebla",
+  Puebla: "puebla",
 
-  Punjab = "punjab",
+  Punjab: "punjab",
 
-  Queretaro = "queretaro",
+  Queretaro: "queretaro",
 
-  SanLuisPotosi = "sanLuisPotosi",
+  SanLuisPotosi: "sanLuisPotosi",
 
-  Sinaloa = "sinaloa",
+  Sinaloa: "sinaloa",
 
-  Sonora = "sonora",
+  Sonora: "sonora",
 
-  Tabasco = "tabasco",
+  Tabasco: "tabasco",
 
-  TamilNadu = "tamilNadu",
+  TamilNadu: "tamilNadu",
 
-  Yucatan = "yucatan",
+  Yucatan: "yucatan",
 
-  Zacatecas = "zacatecas",
+  Zacatecas: "zacatecas",
 
-  Aguascalientes = "aguascalientes",
+  Aguascalientes: "aguascalientes",
 
-  BajaCaliforniaSur = "bajaCaliforniaSur",
+  BajaCaliforniaSur: "bajaCaliforniaSur",
 
-  Campeche = "campeche",
+  Campeche: "campeche",
 
-  Colima = "colima",
+  Colima: "colima",
 
-  QuintanaRooBenitoJuarez = "quintanaRooBenitoJuarez",
+  QuintanaRooBenitoJuarez: "quintanaRooBenitoJuarez",
 
-  QuintanaRoo = "quintanaRoo",
+  QuintanaRoo: "quintanaRoo",
 
-  QuintanaRooSolidaridad = "quintanaRooSolidaridad",
+  QuintanaRooSolidaridad: "quintanaRooSolidaridad",
 
-  Tlaxcala = "tlaxcala",
+  Tlaxcala: "tlaxcala",
 
-  QuintanaRooCozumel = "quintanaRooCozumel",
+  QuintanaRooCozumel: "quintanaRooCozumel",
 
-  SanPaolo = "saoPaolo",
+  SanPaolo: "saoPaolo",
 
-  RioDeJaniero = "rioDeJaneiro",
+  RioDeJaniero: "rioDeJaneiro",
 
-  RioGrandeDoSul = "rioGrandeDoSul",
+  RioGrandeDoSul: "rioGrandeDoSul",
 
-  NorthWestTerritories = "northWestTerritories",
+  NorthWestTerritories: "northWestTerritories",
 
-  Nunavut = "nunavut",
+  Nunavut: "nunavut",
 
-  PrinceEdwardIsland = "princeEdwardIsland",
+  PrinceEdwardIsland: "princeEdwardIsland",
 
-  DistritoFederal = "distritoFederal",
+  DistritoFederal: "distritoFederal",
 
-  Maranhao = "maranhao",
+  Maranhao: "maranhao",
 
-  MatoGrosso = "matoGrosso",
+  MatoGrosso: "matoGrosso",
 
-  MinasGerais = "minasGerais",
+  MinasGerais: "minasGerais",
 
-  Para = "para",
+  Para: "para",
 
-  Parana = "parana",
+  Parana: "parana",
 
-  Pernambuco = "pernambuco",
+  Pernambuco: "pernambuco",
 
-  SantaCatarina = "santaCatarina",
+  SantaCatarina: "santaCatarina",
 
-  AndhraPradesh = "andhraPradesh",
+  AndhraPradesh: "andhraPradesh",
 
-  Ceara = "ceara",
+  Ceara: "ceara",
 
-  Goias = "goias",
+  Goias: "goias",
 
-  GuerreroAcapulcoDeJuarez = "guerreroAcapulcoDeJuarez",
+  GuerreroAcapulcoDeJuarez: "guerreroAcapulcoDeJuarez",
 
-  Haryana = "haryana",
+  Haryana: "haryana",
 
-  Sergipe = "sergipe",
+  Sergipe: "sergipe",
 
-  Alagos = "alagos",
+  Alagos: "alagos",
 
-  Bangsamoro = "bangsamoro",
+  Bangsamoro: "bangsamoro",
 
-  Telangana = "telangana",
+  Telangana: "telangana",
 
-  Acre = "acre",
+  Acre: "acre",
 
-  EspiritoSanto = "espiritoSanto",
+  EspiritoSanto: "espiritoSanto",
 
-  MatoGrossoDoSul = "matoGrossoDoSul",
+  MatoGrossoDoSul: "matoGrossoDoSul",
 
-  Paraiba = "paraiba",
+  Paraiba: "paraiba",
 
-  Piaui = "piaui",
+  Piaui: "piaui",
 
-  RioGrandeDoNorte = "rioGrandeDoNorte",
+  RioGrandeDoNorte: "rioGrandeDoNorte",
 
-  Tocantins = "tocantins",
+  Tocantins: "tocantins",
 
-  Odisha = "odisha",
+  Odisha: "odisha",
 
-  Uttarakhand = "uttarakhand",
-}
+  Uttarakhand: "uttarakhand",
+} as const;
+
+export type Region = (typeof Region)[keyof typeof Region];
 
 /**
  * Document type.
  *
  */
-export enum DocumentType {
-  None = "none",
+export const DocumentType = {
+  None: "none",
 
-  ConsularId = "consularId",
+  ConsularId: "consularId",
 
-  Dl = "dl",
+  Dl: "dl",
 
-  DlPublicServicesCard = "dlPublicServicesCard",
+  DlPublicServicesCard: "dlPublicServicesCard",
 
-  EmploymentPass = "employmentPass",
+  EmploymentPass: "employmentPass",
 
-  FinCard = "finCard",
+  FinCard: "finCard",
 
-  Id = "id",
+  Id: "id",
 
-  MultipurposeId = "multipurposeId",
+  MultipurposeId: "multipurposeId",
 
-  MyKad = "myKad",
+  MyKad: "myKad",
 
-  MyKid = "myKid",
+  MyKid: "myKid",
 
-  MyPr = "myPR",
+  MyPr: "myPR",
 
-  MyTentera = "myTentera",
+  MyTentera: "myTentera",
 
-  PanCard = "panCard",
+  PanCard: "panCard",
 
-  ProfessionalId = "professionalId",
+  ProfessionalId: "professionalId",
 
-  PublicServicesCard = "publicServicesCard",
+  PublicServicesCard: "publicServicesCard",
 
-  ResidencePermit = "residencePermit",
+  ResidencePermit: "residencePermit",
 
-  ResidentId = "residentId",
+  ResidentId: "residentId",
 
-  TemporaryResidencePermit = "temporaryResidencePermit",
+  TemporaryResidencePermit: "temporaryResidencePermit",
 
-  VoterId = "voterId",
+  VoterId: "voterId",
 
-  WorkPermit = "workPermit",
+  WorkPermit: "workPermit",
 
-  IKad = "iKad",
+  IKad: "iKad",
 
-  MilitaryId = "militaryId",
+  MilitaryId: "militaryId",
 
-  MyKas = "myKas",
+  MyKas: "myKas",
 
-  DocialSecurityCard = "docialSecurityCard",
+  DocialSecurityCard: "docialSecurityCard",
 
-  HealthInsuranceCard = "healthInsuranceCard",
+  HealthInsuranceCard: "healthInsuranceCard",
 
-  Passport = "passport",
+  Passport: "passport",
 
-  SPass = "sPass",
+  SPass: "sPass",
 
-  AddressCard = "addressCard",
+  AddressCard: "addressCard",
 
-  AlienId = "alienId",
+  AlienId: "alienId",
 
-  AlienPassport = "alienPassport",
+  AlienPassport: "alienPassport",
 
-  GreenCard = "greenCard",
+  GreenCard: "greenCard",
 
-  MinorsId = "minorsId",
+  MinorsId: "minorsId",
 
-  PostalId = "postalId",
+  PostalId: "postalId",
 
-  ProfessionalDl = "professionalDl",
+  ProfessionalDl: "professionalDl",
 
-  TaxId = "taxId",
+  TaxId: "taxId",
 
-  WeaponPermit = "weaponPermit",
+  WeaponPermit: "weaponPermit",
 
-  Visa = "visa",
+  Visa: "visa",
 
-  BorderCrossingCard = "borderCrossingCard",
+  BorderCrossingCard: "borderCrossingCard",
 
-  DriverCard = "driverCard",
+  DriverCard: "driverCard",
 
-  GlobalEntryCard = "globalEntryCard",
+  GlobalEntryCard: "globalEntryCard",
 
-  MyPolis = "mypolis",
+  MyPolis: "mypolis",
 
-  NexusCard = "nexusCard",
+  NexusCard: "nexusCard",
 
-  PassportCard = "passportCard",
+  PassportCard: "passportCard",
 
-  ProofOfAgeCard = "proofOfAgeCard",
+  ProofOfAgeCard: "proofOfAgeCard",
 
-  RefugeeId = "refugeeId",
+  RefugeeId: "refugeeId",
 
-  TribalId = "tribalId",
+  TribalId: "tribalId",
 
-  VeteranId = "veteranId",
+  VeteranId: "veteranId",
 
-  CitizenshipCertificate = "citizenshipCertificate",
+  CitizenshipCertificate: "citizenshipCertificate",
 
-  MyNumberCard = "myNumberCard",
+  MyNumberCard: "myNumberCard",
 
-  ConsularPassport = "consularPassport",
+  ConsularPassport: "consularPassport",
 
-  MinorsPassport = "minorsPassport",
+  MinorsPassport: "minorsPassport",
 
-  MinorsPublicServicesCard = "minorsPublicServicesCard",
+  MinorsPublicServicesCard: "minorsPublicServicesCard",
 
-  DrivingPriviligeCard = "drivingPriviligeCard",
+  DrivingPriviligeCard: "drivingPriviligeCard",
 
-  AsylumRequest = "asylumRequest",
+  AsylumRequest: "asylumRequest",
 
-  DriverQualificationCard = "driverQualificationCard",
+  DriverQualificationCard: "driverQualificationCard",
 
-  ProvisionalDl = "provisionalDl",
+  ProvisionalDl: "provisionalDl",
 
-  RefugeePassport = "refugeePassport",
+  RefugeePassport: "refugeePassport",
 
-  SpecialId = "specialId",
+  SpecialId: "specialId",
 
-  UniformedServicesId = "uniformedServicesId",
+  UniformedServicesId: "uniformedServicesId",
 
-  ImmigrantVisa = "immigrantVisa",
+  ImmigrantVisa: "immigrantVisa",
 
-  ConsularVoterId = "consularVoterId",
+  ConsularVoterId: "consularVoterId",
 
-  TwicCard = "twicCard",
+  TwicCard: "twicCard",
 
-  ExitEntryPermit = "exitEntryPermit",
+  ExitEntryPermit: "exitEntryPermit",
 
-  MainlandTravelPermitTaiwan = "mainlandTravelPermitTaiwan",
+  MainlandTravelPermitTaiwan: "mainlandTravelPermitTaiwan",
 
-  NbiClearance = "nbiClearance",
+  NbiClearance: "nbiClearance",
 
-  ProofOfRegistration = "proofOfRegistration",
+  ProofOfRegistration: "proofOfRegistration",
 
-  TemporaryProtectionPermit = "temporaryProtectionPermit",
+  TemporaryProtectionPermit: "temporaryProtectionPermit",
 
-  AfghanCitizenCard = "afghanCitizenCard",
+  AfghanCitizenCard: "afghanCitizenCard",
 
-  EId = "eId",
+  EId: "eId",
 
-  Pass = "pass",
+  Pass: "pass",
 
-  SisId = "sisId",
+  SisId: "sisId",
 
-  AsicCard = "asicCard",
+  AsicCard: "asicCard",
 
-  BidoonCard = "bidoonCard",
+  BidoonCard: "bidoonCard",
 
-  InterimHealthInsuranceCard = "interimHealthInsuranceCard",
+  InterimHealthInsuranceCard: "interimHealthInsuranceCard",
 
-  NonVoterId = "nonVoterId",
+  NonVoterId: "nonVoterId",
 
-  ReciprocalHealthInsuranceCard = "reciprocalHealthInsuranceCard",
+  ReciprocalHealthInsuranceCard: "reciprocalHealthInsuranceCard",
 
-  VehicleRegistration = "vehicleRegistration",
+  VehicleRegistration: "vehicleRegistration",
 
-  EsaadCard = "esaadCard",
+  EsaadCard: "esaadCard",
 
-  RegistrationCertificate = "registrationCertificate",
+  RegistrationCertificate: "registrationCertificate",
 
-  MedicalMarijuanaId = "medicalMarijuanaId",
+  MedicalMarijuanaId: "medicalMarijuanaId",
 
-  NonCardTribalId = "nonCardTribalId",
+  NonCardTribalId: "nonCardTribalId",
 
-  DiplomaticId = "diplomaticId",
+  DiplomaticId: "diplomaticId",
 
-  EmergencyPassport = "emergencyPassport",
+  EmergencyPassport: "emergencyPassport",
 
-  TemporaryPassport = "temporaryPassport",
+  TemporaryPassport: "temporaryPassport",
 
-  MetisFederationCard = "metisFederationCard",
+  MetisFederationCard: "metisFederationCard",
 
-  SocialSecurityCard = "socialSecurityCard",
+  SocialSecurityCard: "socialSecurityCard",
 
-  AdrCertificate = "adrCertificate",
+  AdrCertificate: "adrCertificate",
 
-  NinCard = "ninCard",
+  NinCard: "ninCard",
 
-  MysssCard = "mysssCard",
+  MysssCard: "mysssCard",
 
-  GendarmerieId = "gendarmerieId",
+  GendarmerieId: "gendarmerieId",
 
-  PoliceId = "policeId",
-}
-
+  PoliceId: "policeId",
+} as const;
+export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
 /**
  * Represents all possible field types that can be extracted from the document.
  *
  */
-export enum FieldType {
-  AdditionalAddressInformation = "additionalAddressInformation",
+export const FieldType = {
+  AdditionalAddressInformation: "additionalAddressInformation",
 
-  AdditionalNameInformation = "additionalNameInformation",
+  AdditionalNameInformation: "additionalNameInformation",
 
-  AdditionalOptionalAddressInformation = "additionalOptionalAddressInformation",
+  AdditionalOptionalAddressInformation: "additionalOptionalAddressInformation",
 
-  AdditionalPersonalIdNumber = "additionalPersonalIdNumber",
+  AdditionalPersonalIdNumber: "additionalPersonalIdNumber",
 
-  Address = "address",
+  Address: "address",
 
-  ClassEffectiveDate = "classEffectiveDate",
+  ClassEffectiveDate: "classEffectiveDate",
 
-  ClassExpiryDate = "classExpiryDate",
+  ClassExpiryDate: "classExpiryDate",
 
-  Conditions = "conditions",
+  Conditions: "conditions",
 
-  DateOfBirth = "dateOfBirth",
+  DateOfBirth: "dateOfBirth",
 
-  DateOfExpiry = "dateOfExpiry",
+  DateOfExpiry: "dateOfExpiry",
 
-  DateOfIssue = "dateOfIssue",
+  DateOfIssue: "dateOfIssue",
 
-  DocumentAdditionalNumber = "documentAdditionalNumber",
+  DocumentAdditionalNumber: "documentAdditionalNumber",
 
-  DocumentOptionalAdditionalNumber = "documentOptionalAdditionalNumber",
+  DocumentOptionalAdditionalNumber: "documentOptionalAdditionalNumber",
 
-  DocumentNumber = "documentNumber",
+  DocumentNumber: "documentNumber",
 
-  Employer = "employer",
+  Employer: "employer",
 
-  Endorsements = "endorsements",
+  Endorsements: "endorsements",
 
-  FathersName = "fathersName",
+  FathersName: "fathersName",
 
-  FirstName = "firstName",
+  FirstName: "firstName",
 
-  FullName = "fullName",
+  FullName: "fullName",
 
-  IssuingAuthority = "issuingAuthority",
+  IssuingAuthority: "issuingAuthority",
 
-  LastName = "lastName",
+  LastName: "lastName",
 
-  LicenseType = "licenceType",
+  LicenseType: "licenceType",
 
-  LocalizedName = "localizedName",
+  LocalizedName: "localizedName",
 
-  MaritalStatus = "maritalStatus",
+  MaritalStatus: "maritalStatus",
 
-  MothersName = "mothersName",
+  MothersName: "mothersName",
 
-  Mrz = "mrz",
+  Mrz: "mrz",
 
-  Nationality = "nationality",
+  Nationality: "nationality",
 
-  PersonalIdNumber = "personalIdNumber",
+  PersonalIdNumber: "personalIdNumber",
 
-  PlaceOfBirth = "placeOfBirth",
+  PlaceOfBirth: "placeOfBirth",
 
-  Profession = "profession",
+  Profession: "profession",
 
-  Race = "race",
+  Race: "race",
 
-  Religion = "religion",
+  Religion: "religion",
 
-  ResidentialStatus = "residentialStatus",
+  ResidentialStatus: "residentialStatus",
 
-  Restriction = "restrictions",
+  Restriction: "restrictions",
 
-  Sex = "sex",
+  Sex: "sex",
 
-  VehicleClass = "vehicleClass",
+  VehicleClass: "vehicleClass",
 
-  BloodType = "bloodType",
+  BloodType: "bloodType",
 
-  Sponsor = "sponsor",
+  Sponsor: "sponsor",
 
-  VisaType = "visaType",
+  VisaType: "visaType",
 
-  DocumentSubtype = "documentSubtype",
+  DocumentSubtype: "documentSubtype",
 
-  Remarks = "remarks",
+  Remarks: "remarks",
 
-  ResidencePermitType = "residencePermitType",
+  ResidencePermitType: "residencePermitType",
 
-  ManufacturingYear = "manufacturingYear",
+  ManufacturingYear: "manufacturingYear",
 
-  VehicleType = "vehicleType",
+  VehicleType: "vehicleType",
 
-  DependentDateOfBirth = "dependentDateOfBirth",
+  DependentDateOfBirth: "dependentDateOfBirth",
 
-  DependentSex = "dependentSex",
+  DependentSex: "dependentSex",
 
-  DependentDocumentNumber = "dependentDocumentNumber",
+  DependentDocumentNumber: "dependentDocumentNumber",
 
-  DependentFullName = "dependentFullName",
+  DependentFullName: "dependentFullName",
 
-  EligibilityCategory = "eligibilityCategory",
+  EligibilityCategory: "eligibilityCategory",
 
-  SpecificDocumentValidity = "specificDocumentValidity",
+  SpecificDocumentValidity: "specificDocumentValidity",
 
-  VehicleOwner = "vehicleOwner",
+  VehicleOwner: "vehicleOwner",
 
-  nationalInsuranceNumber = "nationalInsuranceNumber",
+  nationalInsuranceNumber: "nationalInsuranceNumber",
 
-  CountryCode = "countryCode",
+  CountryCode: "countryCode",
 
-  CertificateNumber = "certificateNumber",
+  CertificateNumber: "certificateNumber",
 
-  MunicipalityOfRegistration = "municipalityOfRegistration",
+  MunicipalityOfRegistration: "municipalityOfRegistration",
 
-  LocalityCode = "localityCode",
+  LocalityCode: "localityCode",
 
-  MaidenName = "maidenName",
+  MaidenName: "maidenName",
 
-  StateCode = "stateCode",
+  StateCode: "stateCode",
 
-  DateOfEntry = "dateOfEntry",
+  DateOfEntry: "dateOfEntry",
 
-  MunicipalityCode = "municipalityCode",
+  MunicipalityCode: "municipalityCode",
 
-  PollingStationCode = "pollingStationCode",
+  PollingStationCode: "pollingStationCode",
 
-  SectionCode = "sectionCode",
+  SectionCode: "sectionCode",
 
-  RegistrationCenterCode = "registrationCenterCode",
+  RegistrationCenterCode: "registrationCenterCode",
 
-  StateName = "stateName",
+  StateName: "stateName",
 
-  EffectiveDate = "effectiveDate",
+  EffectiveDate: "effectiveDate",
 
-  ParentsLastName = "parentsLastName",
+  ParentsLastName: "parentsLastName",
 
-  ParentsLastName2 = "parentsLastName2",
+  ParentsLastName2: "parentsLastName2",
 
-  ParentsFirstName = "parentsFirstName",
+  ParentsFirstName: "parentsFirstName",
 
-  ParentsFirstName2 = "parentsFirstName2",
+  ParentsFirstName2: "parentsFirstName2",
 
-  WorkRestriction = "workRestriction",
+  WorkRestriction: "workRestriction",
 
-  SocialSecurityStatus = "socialSecurityStatus",
+  SocialSecurityStatus: "socialSecurityStatus",
 
-  LegalStatus = "legalStatus",
+  LegalStatus: "legalStatus",
 
-  HusbandName = "husbandName",
+  HusbandName: "husbandName",
 
-  ChinPermanentExpiry = "chinPermanentExpiry",
-}
+  ChinPermanentExpiry: "chinPermanentExpiry",
+} as const;
+
+export type FieldType = (typeof FieldType)[keyof typeof FieldType];
 
 /** An enum indicating preffered camera position for document capturing. */
-export enum PreferredCamera {
+export type PreferredCamera =
   /**
    * Use the back-facing camera
    *
    * This is the default value
    */
-  Back = "back",
+  | "back"
 
   /**
    * Use the front-facing camera
    *
    */
-  Front = "front",
-}
+  | "front";
