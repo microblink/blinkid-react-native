@@ -16,6 +16,7 @@ Pod::Spec.new do |s|
 
   s.source_files = [
     "ios/*.{swift,h,m,mm,cpp}",
+    "ios/Serialization/*.{swift,h,m,mm,cpp}",
     "ios/generated/**/*.{swift,h,m,mm,cpp}",
     "ios/Frameworks/Source/**/*.{swift,h,m,mm,cpp}"
   ]

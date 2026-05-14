@@ -1,5 +1,5 @@
 //
-//  BlinkIdSerializationUtilities.swift
+//  BlinkIdDeserializationUtilities.swift
 //  BlinkidReactNative
 //
 //  Created by Milan Parađina on 22.05.2025..
@@ -9,13 +9,13 @@ import Foundation
 import BlinkID
 import UIKit
 
-class BlinkIdSerializationUtilities {
+class BlinkIdSerializationUtils {
 
     static func serializeBlinkIdScanningResult(_ scanningResult: BlinkIDScanningResult?) -> String? {
         var scanningResultDict = Dictionary<String, Any>()
         
         if let scanningResult {
-            scanningResultDict["recognitionMode"] = scanningResult.recognitionMode.rawValue
+            
             scanningResultDict["documentClassInfo"] = serializeDocumentClassInfo(scanningResult.documentClassInfo)
 
             if let dataMatchResult = scanningResult.dataMatchResult {
@@ -87,6 +87,9 @@ class BlinkIdSerializationUtilities {
             if let documentNumber = scanningResult.documentNumber {
                 scanningResultDict["documentNumber"] = serializeStringResult(documentNumber)
             }
+            if let cardAccessNumber = scanningResult.cardAccessNumber {
+                scanningResultDict["cardAccessNumber"] = serializeStringResult(cardAccessNumber)
+            }
             if let personalIdNumber = scanningResult.personalIdNumber {
                 scanningResultDict["personalIdNumber"] = serializeStringResult(personalIdNumber)
             }
@@ -117,18 +120,6 @@ class BlinkIdSerializationUtilities {
             if let vehicleType = scanningResult.vehicleType {
                 scanningResultDict["vehicleType"] = serializeStringResult(vehicleType)
             }
-            if let vehicleOwner = scanningResult.vehicleOwner {
-                scanningResultDict["vehicleOwner"] = serializeStringResult(vehicleOwner)
-            }
-            if let countryCode = scanningResult.countryCode {
-                scanningResultDict["countryCode"] = serializeStringResult(countryCode)
-            }
-            if let certificateNumber = scanningResult.certificateNumber {
-                scanningResultDict["certificateNumber"] = serializeStringResult(certificateNumber)
-            }
-            if let nationalInsuranceNumber = scanningResult.nationalInsuranceNumber {
-                scanningResultDict["nationalInsuranceNumber"] = serializeStringResult(nationalInsuranceNumber)
-            }
             if let eligibilityCategory = scanningResult.eligibilityCategory {
                 scanningResultDict["eligibilityCategory"] = serializeStringResult(eligibilityCategory)
             }
@@ -138,20 +129,17 @@ class BlinkIdSerializationUtilities {
             if let visaType = scanningResult.visaType {
                 scanningResultDict["visaType"] = serializeStringResult(visaType)
             }
-            if let dateOfExpiryPermanent = scanningResult.dateOfExpiryPermanent {
-                scanningResultDict["dateOfExpiryPermanent"] = dateOfExpiryPermanent
+            if let vehicleOwner = scanningResult.vehicleOwner {
+                scanningResultDict["vehicleOwner"] = serializeStringResult(vehicleOwner)
             }
-            if let dateOfBirth = scanningResult.dateOfBirth {
-                scanningResultDict["dateOfBirth"] = serializeDateResult(dateOfBirth)
+            if let certificateNumber = scanningResult.certificateNumber {
+                scanningResultDict["certificateNumber"] = serializeStringResult(certificateNumber)
             }
-            if let dateOfIssue = scanningResult.dateOfIssue {
-                scanningResultDict["dateOfIssue"] = serializeDateResult(dateOfIssue)
+            if let countryCode = scanningResult.countryCode {
+                scanningResultDict["countryCode"] = serializeStringResult(countryCode)
             }
-            if let dateOfExpiry = scanningResult.dateOfExpiry {
-                scanningResultDict["dateOfExpiry"] = serializeDateResult(dateOfExpiry)
-            }
-            if let dateOfEntry = scanningResult.dateOfEntry {
-                scanningResultDict["dateOfEntry"] = serializeDateResult(dateOfEntry)
+            if let nationalInsuranceNumber = scanningResult.nationalInsuranceNumber {
+                scanningResultDict["nationalInsuranceNumber"] = serializeStringResult(nationalInsuranceNumber)
             }
             if let localityCode = scanningResult.localityCode {
                 scanningResultDict["localityCode"] = serializeStringResult(localityCode)
@@ -180,6 +168,24 @@ class BlinkIdSerializationUtilities {
             if let stateName = scanningResult.stateName {
                 scanningResultDict["stateName"] = serializeStringResult(stateName)
             }
+            if let dateOfBirth = scanningResult.dateOfBirth {
+                scanningResultDict["dateOfBirth"] = serializeDateResult(dateOfBirth)
+            }
+            if let dateOfIssue = scanningResult.dateOfIssue {
+                scanningResultDict["dateOfIssue"] = serializeDateResult(dateOfIssue)
+            }
+            if let dateOfExpiry = scanningResult.dateOfExpiry {
+                scanningResultDict["dateOfExpiry"] = serializeDateResult(dateOfExpiry)
+            }
+            if let dateOfEntry = scanningResult.dateOfEntry {
+                scanningResultDict["dateOfEntry"] = serializeDateResult(dateOfEntry)
+            }
+            if let effectiveDate = scanningResult.effectiveDate {
+                scanningResultDict["effectiveDate"] = serializeDateResult(effectiveDate)
+            }
+            if let dateOfExpiryPermanent = scanningResult.dateOfExpiryPermanent {
+                scanningResultDict["dateOfExpiryPermanent"] = dateOfExpiryPermanent
+            }
             if let driverLicenseDetailedInfo = scanningResult.driverLicenseDetailedInfo {
                 scanningResultDict["driverLicenseDetailedInfo"] = serializeDriverLicenseDetailedInfo(driverLicenseDetailedInfo)
             }
@@ -188,9 +194,6 @@ class BlinkIdSerializationUtilities {
             }
             if let parentsInfo = scanningResult.parentsInfo {
                 scanningResultDict["parentsInfo"] = parentsInfo.map(serializeParentInfo(_:))
-            }
-            if let effectiveDate = scanningResult.effectiveDate {
-                scanningResultDict["effectiveDate"] = serializeDateResult(effectiveDate)
             }
             if let husbandName = scanningResult.husbandName {
                 scanningResultDict["husbandName"] = serializeStringResult(husbandName)
@@ -212,8 +215,8 @@ class BlinkIdSerializationUtilities {
             if let secondInputImage = scanningResult.getInputImage(scanningSide: .second) {
                 scanningResultDict["secondInputImage"] = encodeImage(secondInputImage.uiImage)
             }
-            if let barcodeInputImage = scanningResult.getBarcodeInputImage() {
-                scanningResultDict["barcodeInputImage"] = encodeImage(barcodeInputImage.uiImage)
+            if let barcodeImage = scanningResult.getBarcodeImage() {
+                scanningResultDict["barcodeImage"] = encodeImage(barcodeImage.uiImage)
             }
             if let firstDocumentImage = scanningResult.getDocumentImage(scanningSide: .first) {
                 scanningResultDict["firstDocumentImage"] = encodeImage(firstDocumentImage.uiImage)
@@ -232,74 +235,55 @@ class BlinkIdSerializationUtilities {
         return encodeToJson(scanningResultDict)
     }
     
-    static func serializeRecognitionMode(_ recognitionMode: RecognitionMode) -> Int {
-        switch recognitionMode {
-        case .none:
-            return 0
-        case .mrzId:
-            return 1
-        case .mrzVisa:
-            return 2
-        case .mrzPassport:
-            return 3
-        case .photoId:
-            return 4
-        case .fullRecognition:
-            return 5
-        case .barcodeId:
-            return 6
-        }
-    }
-    
-    static func serializeDocumentClassInfo(_ documentClassInfo: BlinkIDSDK.DocumentClassInfo?) -> Dictionary<String, Any> {
-        return
+    static func serializeDocumentClassInfo(_ documentClassInfo: BlinkIDSDK.DocumentClassInfo) -> Dictionary<String, Any?> {
+        
         [
-            "country": documentClassInfo?.country.rawValue,
-            "region": documentClassInfo?.region.rawValue,
-            "documentType": documentClassInfo?.documentType.rawValue,
-            "countryName": documentClassInfo?.countryName,
-            "isoNumericCountryCode": documentClassInfo?.isoNumericCountryCode,
-            "isoAlpha2CountryCode": documentClassInfo?.isoAlpha2CountryCode,
-            "isoAlpha3CountryCode": documentClassInfo?.isoAlpha3CountryCode,
-            "isEmpty": documentClassInfo?.isEmpty()
+            "country": documentClassInfo.country.rawValue,
+            "region": documentClassInfo.region.rawValue,
+            "documentType": documentClassInfo.documentType.rawValue,
+            "countryName": documentClassInfo.countryName,
+            "isoNumericCountryCode": documentClassInfo.isoNumericCountryCode,
+            "isoAlpha2CountryCode": documentClassInfo.isoAlpha2CountryCode,
+            "isoAlpha3CountryCode": documentClassInfo.isoAlpha3CountryCode,
+            "isEmpty": documentClassInfo.isEmpty()
         ]
     }
     
-    static func serializeDataMatchResult(_ dataMatchResult: DataMatchResult?) -> Dictionary<String, Any> {
+    static func serializeDataMatchResult(_ dataMatchResult: DataMatchResult?) -> Dictionary<String, Any?> {
         return [
             "states": dataMatchResult?.states.map(serializeDataMatchState(_:)),
             "overallState": deserializeDataMatchState(dataMatchResult?.overallState)
         ]
     }
     
-    static func serializeDataMatchState(_ dataMatchState: FieldState?) -> Dictionary<String, Any> {
+    static func serializeDataMatchState(_ dataMatchState: FieldState) -> Dictionary<String, Any> {
         return [
-            "field": deserializeDataMatchField(dataMatchState?.fieldType),
-            "state": deserializeDataMatchState(dataMatchState?.state)
+            "field": deserializeDataMatchField(dataMatchState.fieldType),
+            "state": deserializeDataMatchState(dataMatchState.state)
         ]
     }
     
-    static func deserializeDataMatchField(_ field: DataMatchFieldType?) -> Int? {
+    static func deserializeDataMatchField(_ field: DataMatchFieldType) -> String {
         switch field {
         case .dateOfBirth:
-            return 0
+            return "dateOfBirth"
         case .dateOfExpiry:
-            return 1
+            return "dateOfExpiry"
         case .documentNumber:
-            return 2
+            return "documentNumber"
         case .documentAdditionalNumber:
-            return 3
+            return "documentAdditionalNumber"
         case .documentOptionalAdditionalNumber:
-            return 4
+            return "documentOptionalAdditionalNumber"
         case .personalIdNumber:
-            return 5
+            return "personalIdNumber"
         @unknown default:
-            return nil
+            return ""
         }
     }
 
-    static func serializeStringResult(_ stringResult: BlinkIDSDK.StringResult?) -> Dictionary<String, Any>{
-        var stringResultDict: Dictionary<String, Any> = [
+    static func serializeStringResult(_ stringResult: BlinkIDSDK.StringResult?) -> Dictionary<String, Any?>{
+        var stringResultDict: Dictionary<String, Any?> = [
             "value": stringResult?.value,
             "latin": stringResult?.value(for: .latin),
             "arabic": stringResult?.value(for: .arabic),
@@ -314,7 +298,7 @@ class BlinkIdSerializationUtilities {
             "greek": serializeRect(stringResult?.location(for: .greek))
         ]
         
-        var sideDict: Dictionary<String, Any> = [
+        var sideDict: Dictionary<String, Any?> = [
             "latin": serializeScanningSide(stringResult?.side(for: .latin)),
             "arabic": serializeScanningSide(stringResult?.side(for: .arabic)),
             "cyrillic": serializeScanningSide(stringResult?.side(for: .cyrillic)),
@@ -335,7 +319,7 @@ class BlinkIdSerializationUtilities {
         return rectangleDict.compactMapValues { $0 }
     }
     
-    static func serializeDateResult<T>(_ dateResult: DateResult<T>?) -> Dictionary<String, Any>? {
+    static func serializeDateResult<T>(_ dateResult: DateResult<T>?) -> Dictionary<String, Any?>? {
         return [
             "date": serializeSimpleDate(dateResult),
             "filledByDomainKnowledge": dateResult?.filledByDomainKnowledge,
@@ -353,7 +337,7 @@ class BlinkIdSerializationUtilities {
         return simpleDateDict.compactMapValues { $0 }
     }
     
-    static func serializeDriverLicenseDetailedInfo<T>(_ driverLicenseDetailedInfo:  DriverLicenseDetailedInfo<T>?) -> Dictionary<String, Any>? {
+    static func serializeDriverLicenseDetailedInfo<T>(_ driverLicenseDetailedInfo:  DriverLicenseDetailedInfo<T>?) -> Dictionary<String, Any?>? {
         return [
             "conditions": serializeStringType(driverLicenseDetailedInfo?.conditions),
             "endorsements": serializeStringType(driverLicenseDetailedInfo?.endorsements),
@@ -363,7 +347,7 @@ class BlinkIdSerializationUtilities {
         ]
     }
     
-    static func serializeVehicleClassInfo<T>(_ vehicleClassInfo: VehicleClassInfo<T>?) -> Dictionary<String, Any> {
+    static func serializeVehicleClassInfo<T>(_ vehicleClassInfo: VehicleClassInfo<T>?) -> Dictionary<String, Any?> {
         return [
             "effectiveDate": serializeDateResult(vehicleClassInfo?.effectiveDate),
             "expiryDate":  serializeDateResult(vehicleClassInfo?.expiryDate),
@@ -371,7 +355,7 @@ class BlinkIdSerializationUtilities {
             "vehicleClass": serializeStringType(vehicleClassInfo?.vehicleClass)
         ]
     }
-    static func serializeDependentInfo(_ dependentInfo: DependentInfo?) -> Dictionary<String, Any> {
+    static func serializeDependentInfo(_ dependentInfo: DependentInfo?) -> Dictionary<String, Any?> {
         return [
             "dateOfBirth": serializeDateResult(dependentInfo?.dateOfBirth),
             "documentNumber": serializeStringResult(dependentInfo?.documentNumber),
@@ -380,54 +364,55 @@ class BlinkIdSerializationUtilities {
         ]
     }
     
-    static func serializeSingleSideScanningResult(_ singleSideScanningResult: SingleSideScanningResult?) -> Dictionary<String, Any> {
+    static func serializeSingleSideScanningResult(_ singleSideScanningResult: SingleSideScanningResult?) -> Dictionary<String, Any?> {
         guard let singleSideScanningResult else { return [:] }
         
         return [
-                "barcode": serializeBarcodeResult(singleSideScanningResult.barcode),
-                "barcodeInputImage": encodeImage(singleSideScanningResult.barcodeInputImage?.uiImage),
-                "documentImage": encodeImage(singleSideScanningResult.documentImage?.uiImage),
-                "faceImage": serializeDetailedCroppedImageResult(singleSideScanningResult.faceImage),
-                "inputImage": encodeImage(singleSideScanningResult.inputImage?.uiImage),
-                "mrz": serializeMrzResult(singleSideScanningResult.mrz),
-                "signatureImage": serializeDetailedCroppedImageResult(singleSideScanningResult.signatureImage),
-                "viz": serializeVizResult(singleSideScanningResult.viz)
+            "viz": serializeVizResult(singleSideScanningResult.viz),
+            "mrz": serializeMrzResult(singleSideScanningResult.mrz),
+            "barcode": serializeBarcodeResult(singleSideScanningResult.barcode),
+            "inputImage": encodeImage(singleSideScanningResult.inputImage?.uiImage),
+            "barcodeImage": encodeImage(singleSideScanningResult.barcodeImage?.uiImage),
+            "documentImage": encodeImage(singleSideScanningResult.documentImage?.uiImage),
+            "faceImage": serializeDetailedCroppedImageResult(singleSideScanningResult.faceImage),
+            "signatureImage": serializeDetailedCroppedImageResult(singleSideScanningResult.signatureImage),
+                
             ]
     }
     
-    static func serializeBarcodeResult(_ barcodeResult: BarcodeResult?) -> Dictionary<String, Any> {
+    static func serializeBarcodeResult(_ barcodeResult: BarcodeResult?) -> Dictionary<String, Any?> {
         return [
+            "barcodeData": serializeBarcodeData(barcodeResult?.barcodeData),
+            "parsed": barcodeResult?.parsed,
+            "firstName": barcodeResult?.firstName,
+            "middleName": barcodeResult?.middleName,
+            "lastName": barcodeResult?.lastName,
+            "fullName": barcodeResult?.fullName,
             "additionalNameInformation": barcodeResult?.additionalNameInformation,
             "address": barcodeResult?.address,
-            "addressDetailedInfo": serializeAddressDetailedInfo(barcodeResult?.addressDetailedInfo),
-            "barcodeData": serializeBarcodeData(barcodeResult?.barcodeData),
-            "dateOfBirth": serializeDateResult(barcodeResult?.dateOfBirth),
-            "dateOfExpiry": serializeDateResult(barcodeResult?.dateOfExpiry),
-            "dateOfIssue": serializeDateResult(barcodeResult?.dateOfIssue),
-            "documentAdditionalNumber": barcodeResult?.documentAdditionalNumber,
-            "documentNumber": barcodeResult?.documentNumber,
-            "driverLicenseDetailedInfo": serializeDriverLicenseDetailedInfo(barcodeResult?.driverLicenseDetailedInfo),
-            "employer": barcodeResult?.employer,
-            "extendedElements": serializeBarcodeExtendedElements(barcodeResult?.extendedElements),
-            "firstName": barcodeResult?.firstName,
-            "fullName": barcodeResult?.fullName,
-            "issuingAuthority": barcodeResult?.issuingAuthority,
-            "lastName": barcodeResult?.lastName,
-            "maritalStatus": barcodeResult?.maritalStatus,
-            "middleName": barcodeResult?.middleName,
             "nationality": barcodeResult?.nationality,
-            "personalIdNumber": barcodeResult?.personalIdNumber,
             "placeOfBirth": barcodeResult?.placeOfBirth,
-            "profession": barcodeResult?.profession,
             "race": barcodeResult?.race,
             "religion": barcodeResult?.religion,
+            "profession": barcodeResult?.profession,
+            "maritalStatus": barcodeResult?.maritalStatus,
             "residentialStatus": barcodeResult?.residentialStatus,
+            "employer": barcodeResult?.employer,
             "sex": barcodeResult?.sex,
-            "parsed": barcodeResult?.parsed
+            "dateOfBirth": serializeDateResult(barcodeResult?.dateOfBirth),
+            "dateOfIssue": serializeDateResult(barcodeResult?.dateOfIssue),
+            "dateOfExpiry": serializeDateResult(barcodeResult?.dateOfExpiry),
+            "documentNumber": barcodeResult?.documentNumber,
+            "personalIdNumber": barcodeResult?.personalIdNumber,
+            "documentAdditionalNumber": barcodeResult?.documentAdditionalNumber,
+            "issuingAuthority": barcodeResult?.issuingAuthority,
+            "addressDetailedInfo": serializeAddressDetailedInfo(barcodeResult?.addressDetailedInfo),
+            "driverLicenseDetailedInfo": serializeDriverLicenseDetailedInfo(barcodeResult?.driverLicenseDetailedInfo),
+            "extendedElements": serializeBarcodeExtendedElements(barcodeResult?.extendedElements),
         ]
     }
     
-    static func serializeAddressDetailedInfo(_ addressDetailedInfo: AddressDetailedInfo?) -> Dictionary<String, Any> {
+    static func serializeAddressDetailedInfo(_ addressDetailedInfo: AddressDetailedInfo?) -> Dictionary<String, Any?> {
         return [
             "city": addressDetailedInfo?.city,
             "postalCode": addressDetailedInfo?.postalCode,
@@ -435,7 +420,7 @@ class BlinkIdSerializationUtilities {
             "street": addressDetailedInfo?.street
         ]
     }
-    static func serializeBarcodeData(_ barcodeData: BarcodeData?) -> Dictionary<String, Any> {
+    static func serializeBarcodeData(_ barcodeData: BarcodeData?) -> Dictionary<String, Any?> {
         return [
             "barcodeType": serializeBarcodeType(barcodeData?.barcodeType),
             "rawData": barcodeData?.rawData.base64EncodedString(),
@@ -444,38 +429,40 @@ class BlinkIdSerializationUtilities {
         ]
     }
     
-    static func serializeBarcodeType(_ barcodeType: BarcodeType?) -> Int? {
+    static func serializeBarcodeType(_ barcodeType: BarcodeType?) -> String {
         switch barcodeType {
-        case .none:
-            return 0
+        case nil:
+            return "none"
         case .qrCode:
-            return 1
+            return "qrCode"
         case .dataMatrix:
-            return 2
+            return "dataMatrix"
         case .upce:
-            return 3
+            return "upce"
         case .upca:
-            return 4
+            return "upca"
         case .ean8:
-            return 5
+            return "ean8"
         case .ean13:
-            return 6
+            return "ean13"
         case .code128:
-            return 7
+            return "code128"
         case .code39:
-            return 8
+            return "code39"
         case .itf:
-            return 9
+            return "itf"
         case .aztec:
-            return 10
+            return "aztec"
         case .pdf417:
-            return 11
+            return "pdf417"
+        case .none?:
+            return "none"
         @unknown default:
-            return 0
+            return "none"
         }
     }
 
-    static func serializeBarcodeExtendedElements(_ barcodeExtendedElements: BarcodeElements?) -> [String: Any] {
+    static func serializeBarcodeExtendedElements(_ barcodeExtendedElements: BarcodeElements?) -> [String: Any?] {
         var elements = barcodeExtendedElements
         
         return [
@@ -578,30 +565,30 @@ class BlinkIdSerializationUtilities {
     static func encodeImage(_ image: UIImage?) -> String? {
         return image?.jpegData(compressionQuality: 1.0)?.base64EncodedString()
     }
-    static func serializeMrzResult(_ mrzResult: MRZResult?) -> Dictionary<String, Any> {
+    static func serializeMrzResult(_ mrzResult: MRZResult?) -> Dictionary<String, Any?> {
         return [
-            "dateOfBirth": serializeDateResult(mrzResult?.dateOfBirth),
-            "dateOfExpiry": serializeDateResult(mrzResult?.dateOfExpiry),
+            "rawMRZString": mrzResult?.rawMRZString,
             "documentCode": mrzResult?.documentCode,
-            "documentNumber": mrzResult?.documentNumber,
-            "documentType": serializeMrzDocumentType(mrzResult?.documentType),
-            "gender": mrzResult?.gender,
             "issuer": mrzResult?.issuer,
-            "issuerName": mrzResult?.issuerName,
-            "nationality": mrzResult?.nationality,
-            "nationalityName": mrzResult?.nationalityName,
+            "documentNumber": mrzResult?.documentNumber,
             "opt1": mrzResult?.opt1,
             "opt2": mrzResult?.opt2,
+            "gender": mrzResult?.gender,
+            "nationality": mrzResult?.nationality,
             "primaryID": mrzResult?.primaryID,
-            "rawMRZString": mrzResult?.rawMRZString,
-            "sanitizedDocumentCode": mrzResult?.sanitizedDocumentCode,
-            "sanitizedDocumentNumber": mrzResult?.sanitizedDocumentNumber,
-            "sanitizedIssuer": mrzResult?.sanitizedIssuer,
-            "sanitizedNationality": mrzResult?.sanitizedNationality,
+            "secondaryID": mrzResult?.secondaryID,
+            "issuerName": mrzResult?.issuerName,
+            "nationalityName": mrzResult?.nationalityName,
+            "verified": mrzResult?.verified,
+            "dateOfBirth": serializeDateResult(mrzResult?.dateOfBirth),
+            "dateOfExpiry": serializeDateResult(mrzResult?.dateOfExpiry),
+            "documentType": serializeMrzDocumentType(mrzResult?.documentType),
             "sanitizedOpt1": mrzResult?.sanitizedOpt1,
             "sanitizedOpt2": mrzResult?.sanitizedOpt2,
-            "secondaryID": mrzResult?.secondaryID,
-            "verified": mrzResult?.verified
+            "sanitizedNationality": mrzResult?.sanitizedNationality,
+            "sanitizedIssuer": mrzResult?.sanitizedIssuer,
+            "sanitizedDocumentCode": mrzResult?.sanitizedDocumentCode,
+            "sanitizedDocumentNumber": mrzResult?.sanitizedDocumentNumber,
         ]
     }
     
@@ -625,6 +612,8 @@ class BlinkIdSerializationUtilities {
             return 7
         case .borderCrossingCard:
             return 8
+        case .none:
+            return nil
         @unknown default:
             return nil
         }
@@ -632,100 +621,42 @@ class BlinkIdSerializationUtilities {
 
     static func serializeVizResult(_ vizResult: VIZResult?) -> Dictionary<String, Any> {
         var vizResultDict = Dictionary<String, Any>()
-        if let vizResult = vizResult {
-            if let additionalAddressInformation = vizResult.additionalAddressInformation {
-                vizResultDict["additionalAddressInformation"] = serializeStringResult(additionalAddressInformation)
-            }
-            
-            if let additionalNameInformation = vizResult.additionalNameInformation {
-                vizResultDict["additionalNameInformation"] = serializeStringResult(additionalNameInformation)
-            }
-            if let additionalOptionalAddressInformation = vizResult.additionalOptionalAddressInformation {
-                vizResultDict["additionalOptionalAddressInformation"] = serializeStringResult(additionalOptionalAddressInformation)
-            }
-            if let additionalPersonalIdNumber = vizResult.additionalPersonalIdNumber {
-                vizResultDict["additionalPersonalIdNumber"] = serializeStringResult(additionalPersonalIdNumber)
-            }
-            if let address = vizResult.address {
-                vizResultDict["address"] = serializeStringResult(address)
-            }
-            if let bloodType = vizResult.bloodType {
-                vizResultDict["bloodType"] = serializeStringResult(bloodType)
-            }
-            if let dateOfBirth = vizResult.dateOfBirth {
-                vizResultDict["dateOfBirth"] = serializeDateResult(dateOfBirth)
-            }
-            if let dateOfExpiry = vizResult.dateOfExpiry {
-                vizResultDict["dateOfExpiry"] = serializeDateResult(dateOfExpiry)
-            }
-            
-            vizResultDict["dateOfExpiryPermanent"] = vizResult.dateOfExpiryPermanent
-            
-            if let dateOfIssue = vizResult.dateOfIssue {
-                vizResultDict["dateOfIssue"] = serializeDateResult(dateOfIssue)
-            }
-            if let dependentsInfo = vizResult.dependentsInfo {
-                vizResultDict["dependentsInfo"] = dependentsInfo.compactMap(serializeDependentInfo(_:))
-            }
-            if let documentAdditionalNumber = vizResult.documentAdditionalNumber {
-                vizResultDict["documentAdditionalNumber"] = serializeStringResult(documentAdditionalNumber)
-            }
-            if let documentNumber = vizResult.documentNumber {
-                vizResultDict["documentNumber"] = serializeStringResult(documentNumber)
-            }
-            if let documentOptionalAdditionalNumber = vizResult.documentOptionalAdditionalNumber {
-                vizResultDict["documentOptionalAdditionalNumber"] = serializeStringResult(documentOptionalAdditionalNumber)
-            }
-            if let documentSubtype = vizResult.documentSubtype {
-                vizResultDict["documentSubtype"] = serializeStringResult(documentSubtype)
-            }
-            if let driverLicenseDetailedInfo = vizResult.driverLicenseDetailedInfo {
-                vizResultDict["driverLicenseDetailedInfo"] = serializeDriverLicenseDetailedInfo(driverLicenseDetailedInfo)
-            }
-            if let eligibilityCategory = vizResult.eligibilityCategory {
-                vizResultDict["eligibilityCategory"] = serializeStringResult(eligibilityCategory)
-            }
-            if let employer = vizResult.employer {
-                vizResultDict["employer"] = serializeStringResult(employer)
-            }
-            if let fathersName = vizResult.fathersName {
-                vizResultDict["fathersName"] = serializeStringResult(fathersName)
-            }
+        if let vizResult {
             if let firstName = vizResult.firstName {
                 vizResultDict["firstName"] = serializeStringResult(firstName)
-            }
-            if let fullName = vizResult.fullName {
-                vizResultDict["fullName"] = serializeStringResult(fullName)
-            }
-            if let issuingAuthority = vizResult.issuingAuthority {
-                vizResultDict["issuingAuthority"] = serializeStringResult(issuingAuthority)
             }
             if let lastName = vizResult.lastName {
                 vizResultDict["lastName"] = serializeStringResult(lastName)
             }
+            if let fullName = vizResult.fullName {
+                vizResultDict["fullName"] = serializeStringResult(fullName)
+            }
+            if let additionalNameInformation = vizResult.additionalNameInformation {
+                vizResultDict["additionalNameInformation"] = serializeStringResult(additionalNameInformation)
+            }
             if let localizedName = vizResult.localizedName {
                 vizResultDict["localizedName"] = serializeStringResult(localizedName)
             }
-            if let manufacturingYear = vizResult.manufacturingYear {
-                vizResultDict["manufacturingYear"] = serializeStringResult(manufacturingYear)
-            }
-            if let maritalStatus = vizResult.maritalStatus {
-                vizResultDict["maritalStatus"] = serializeStringResult(maritalStatus)
+            if let fathersName = vizResult.fathersName {
+                vizResultDict["fathersName"] = serializeStringResult(fathersName)
             }
             if let mothersName = vizResult.mothersName {
                 vizResultDict["mothersName"] = serializeStringResult(mothersName)
             }
-            if let nationality = vizResult.nationality {
-                vizResultDict["nationality"] = serializeStringResult(nationality)
+            if let address = vizResult.address {
+                vizResultDict["address"] = serializeStringResult(address)
             }
-            if let personalIdNumber = vizResult.personalIdNumber {
-                vizResultDict["personalIdNumber"] = serializeStringResult(personalIdNumber)
+            if let additionalAddressInformation = vizResult.additionalAddressInformation {
+                vizResultDict["additionalAddressInformation"] = serializeStringResult(additionalAddressInformation)
+            }
+            if let additionalOptionalAddressInformation = vizResult.additionalOptionalAddressInformation {
+                vizResultDict["additionalOptionalAddressInformation"] = serializeStringResult(additionalOptionalAddressInformation)
             }
             if let placeOfBirth = vizResult.placeOfBirth {
                 vizResultDict["placeOfBirth"] = serializeStringResult(placeOfBirth)
             }
-            if let profession = vizResult.profession {
-                vizResultDict["profession"] = serializeStringResult(profession)
+            if let nationality = vizResult.nationality {
+                vizResultDict["nationality"] = serializeStringResult(nationality)
             }
             if let race = vizResult.race {
                 vizResultDict["race"] = serializeStringResult(race)
@@ -733,11 +664,11 @@ class BlinkIdSerializationUtilities {
             if let religion = vizResult.religion {
                 vizResultDict["religion"] = serializeStringResult(religion)
             }
-            if let remarks = vizResult.remarks {
-                vizResultDict["remarks"] = serializeStringResult(remarks)
+            if let profession = vizResult.profession {
+                vizResultDict["profession"] = serializeStringResult(profession)
             }
-            if let residencePermitType = vizResult.residencePermitType {
-                vizResultDict["residencePermitType"] = serializeStringResult(residencePermitType)
+            if let maritalStatus = vizResult.maritalStatus {
+                vizResultDict["maritalStatus"] = serializeStringResult(maritalStatus)
             }
             if let residentialStatus = vizResult.residentialStatus {
                 vizResultDict["residentialStatus"] = serializeStringResult(residentialStatus)
@@ -745,32 +676,96 @@ class BlinkIdSerializationUtilities {
             if let sex = vizResult.sex {
                 vizResultDict["sex"] = serializeStringResult(sex)
             }
-            if let specificDocumentValidity = vizResult.specificDocumentValidity {
-                vizResultDict["specificDocumentValidity"] = serializeStringResult(specificDocumentValidity)
+            if let employer = vizResult.employer {
+                vizResultDict["employer"] = serializeStringResult(employer)
             }
             if let sponsor = vizResult.sponsor {
                 vizResultDict["sponsor"] = serializeStringResult(sponsor)
             }
-            if let vehicleOwner = vizResult.vehicleOwner {
-                vizResultDict["vehicleOwner"] = serializeStringResult(vehicleOwner)
+            if let bloodType = vizResult.bloodType {
+                vizResultDict["bloodType"] = serializeStringResult(bloodType)
             }
-            if let vehicleType = vizResult.vehicleType {
-                vizResultDict["vehicleType"] = serializeStringResult(vehicleType)
+            if let dateOfBirth = vizResult.dateOfBirth {
+                vizResultDict["dateOfBirth"] = serializeDateResult(dateOfBirth)
+            }
+            if let dateOfIssue = vizResult.dateOfIssue {
+                vizResultDict["dateOfIssue"] = serializeDateResult(dateOfIssue)
+            }
+            if let dateOfExpiry = vizResult.dateOfExpiry {
+                vizResultDict["dateOfExpiry"] = serializeDateResult(dateOfExpiry)
+            }
+            if let dateOfEntry = vizResult.dateOfEntry {
+                vizResultDict["dateOfEntry"] = serializeDateResult(dateOfEntry)
+            }
+            vizResultDict["dateOfExpiryPermanent"] = vizResult.dateOfExpiryPermanent
+            if let effectiveDate = vizResult.effectiveDate {
+                vizResultDict["effectiveDate"] = serializeDateResult(effectiveDate)
+            }
+            if let documentNumber = vizResult.documentNumber {
+                vizResultDict["documentNumber"] = serializeStringResult(documentNumber)
+            }
+            if let cardAccessNumber = vizResult.cardAccessNumber {
+                vizResultDict["cardAccessNumber"] = serializeStringResult(cardAccessNumber)
+            }
+            if let personalIdNumber = vizResult.personalIdNumber {
+                vizResultDict["personalIdNumber"] = serializeStringResult(personalIdNumber)
+            }
+            if let documentAdditionalNumber = vizResult.documentAdditionalNumber {
+                vizResultDict["documentAdditionalNumber"] = serializeStringResult(documentAdditionalNumber)
+            }
+            if let documentOptionalAdditionalNumber = vizResult.documentOptionalAdditionalNumber {
+                vizResultDict["documentOptionalAdditionalNumber"] = serializeStringResult(documentOptionalAdditionalNumber)
+            }
+            if let additionalPersonalIdNumber = vizResult.additionalPersonalIdNumber {
+                vizResultDict["additionalPersonalIdNumber"] = serializeStringResult(additionalPersonalIdNumber)
+            }
+            if let issuingAuthority = vizResult.issuingAuthority {
+                vizResultDict["issuingAuthority"] = serializeStringResult(issuingAuthority)
             }
             if let visaType = vizResult.visaType {
                 vizResultDict["visaType"] = serializeStringResult(visaType)
             }
+            if let certificateNumber = vizResult.certificateNumber {
+                vizResultDict["certificateNumber"] = serializeStringResult(certificateNumber)
+            }
             if let countryCode = vizResult.countryCode {
                 vizResultDict["countryCode"] = serializeStringResult(countryCode)
             }
-            if let certificateNumber = vizResult.certificateNumber {
-                vizResultDict["certificateNumber"] = serializeStringResult(certificateNumber)
+            if let driverLicenseDetailedInfo = vizResult.driverLicenseDetailedInfo {
+                vizResultDict["driverLicenseDetailedInfo"] = serializeDriverLicenseDetailedInfo(driverLicenseDetailedInfo)
+            }
+            if let documentSubtype = vizResult.documentSubtype {
+                vizResultDict["documentSubtype"] = serializeStringResult(documentSubtype)
+            }
+            if let remarks = vizResult.remarks {
+                vizResultDict["remarks"] = serializeStringResult(remarks)
+            }
+            if let residencePermitType = vizResult.residencePermitType {
+                vizResultDict["residencePermitType"] = serializeStringResult(residencePermitType)
+            }
+            if let manufacturingYear = vizResult.manufacturingYear {
+                vizResultDict["manufacturingYear"] = serializeStringResult(manufacturingYear)
             }
             if let nationalInsuranceNumber = vizResult.nationalInsuranceNumber {
                 vizResultDict["nationalInsuranceNumber"] = serializeStringResult(nationalInsuranceNumber)
             }
-            if let dateOfEntry = vizResult.dateOfEntry {
-                vizResultDict["dateOfEntry"] = serializeDateResult(dateOfEntry)
+            if let vehicleType = vizResult.vehicleType {
+                vizResultDict["vehicleType"] = serializeStringResult(vehicleType)
+            }
+            if let eligibilityCategory = vizResult.eligibilityCategory {
+                vizResultDict["eligibilityCategory"] = serializeStringResult(eligibilityCategory)
+            }
+            if let specificDocumentValidity = vizResult.specificDocumentValidity {
+                vizResultDict["specificDocumentValidity"] = serializeStringResult(specificDocumentValidity)
+            }
+            if let dependentsInfo = vizResult.dependentsInfo {
+                vizResultDict["dependentsInfo"] = dependentsInfo.compactMap(serializeDependentInfo(_:))
+            }
+            if let vehicleOwner = vizResult.vehicleOwner {
+                vizResultDict["vehicleOwner"] = serializeStringResult(vehicleOwner)
+            }
+            if let parentsInfo = vizResult.parentsInfo {
+                vizResultDict["parentsInfo"] = parentsInfo.map(serializeParentInfo(_:))
             }
             if let localityCode = vizResult.localityCode {
                 vizResultDict["localityCode"] = serializeStringResult(localityCode)
@@ -799,12 +794,6 @@ class BlinkIdSerializationUtilities {
             if let stateName = vizResult.stateName {
                 vizResultDict["stateName"] = serializeStringResult(stateName)
             }
-            if let parentsInfo = vizResult.parentsInfo {
-                vizResultDict["parentsInfo"] = parentsInfo.map(serializeParentInfo(_:))
-            }
-            if let effectiveDate = vizResult.effectiveDate {
-                vizResultDict["effectiveDate"] = serializeDateResult(effectiveDate)
-            }
             if let husbandName = vizResult.husbandName {
                 vizResultDict["husbandName"] = serializeStringResult(husbandName)
             }
@@ -821,7 +810,7 @@ class BlinkIdSerializationUtilities {
         return vizResultDict
     }
     
-    static func serializeDetailedCroppedImageResult(_ detailedcroppedImageResult: DetailedCroppedImageResult?) -> Dictionary<String, Any> {
+    static func serializeDetailedCroppedImageResult(_ detailedcroppedImageResult: DetailedCroppedImageResult?) -> Dictionary<String, Any?> {
         return [
             "location": serializeRect(detailedcroppedImageResult?.location),
             "side": serializeScanningSide(detailedcroppedImageResult?.side),
@@ -835,21 +824,20 @@ class BlinkIdSerializationUtilities {
             return 0
         case .second:
             return 1
+        case .none:
+            return nil
         @unknown default:
             return nil
         }
     }
     
-    static func deserializeDataMatchState(_ state: DataMatchState?) -> Int {
+    static func deserializeDataMatchState(_ state: DataMatchState?) -> String {
         switch state {
-        case .notPerformed:
-            return 0
-        case .failed:
-            return 1
-        case .success:
-            return 2
-        @unknown default:
-            return 0
+        case .notPerformed: return "notPerfomed"
+        case .failed: return "failed"
+        case .success: return "success"
+        case .none: return "none"
+        @unknown default: return "none"
         }
     }
     

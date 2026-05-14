@@ -43,13 +43,22 @@ RCT_EXPORT_METHOD(unloadBlinkIdSdk:(BOOL)deleteCachedResources
     }];
 }
 
-RCT_EXPORT_METHOD(performScan:(NSString *)blinkIdSdkSettings
-                  blinkIdSessionSettings:(NSString *)blinkIdSessionSettings
-                  blinkIdScanningUxSettings:(NSString *)blinkIdScanningUxSettings
-                  classFilter:(NSString *)classFilter
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
+RCT_EXPORT_METHOD(performDirectApiScan:(nonnull NSString *)blinkIdSdkSettings blinkIdSessionSettings:(nonnull NSString *)blinkIdSessionSettings firstImage:(nonnull NSString *)firstImage secondImage:(nonnull NSString *)secondImage redactionSettings:(nonnull NSString *)redactionSettings resolve:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPromiseRejectBlock)reject) {
+    [self->moduleImplementation
+     performDirectApiScanWithBlinkIdSdkSettings: [self createDictionaryFromBlinkIdObject: blinkIdSdkSettings]
+     blinkIdSessionSettings: [self createDictionaryFromBlinkIdObject: blinkIdSessionSettings]
+     redactionSettings: [self createDictionaryFromBlinkIdObject:redactionSettings]
+     firstImage:firstImage
+     secondImage:secondImage
+     onResolve:^(NSString * _Nonnull result) {
+        resolve(@[result]);
+    } onReject:^(NSString * _Nonnull error) {
+        reject(@"BlinkIdIosError", error, nil);
+    }];
+}
+
+
+RCT_EXPORT_METHOD(performScan:(nonnull NSString *)blinkIdSdkSettings blinkIdSessionSettings:(nonnull NSString *)blinkIdSessionSettings blinkIdScanningUxSettings:(nonnull NSString *)blinkIdScanningUxSettings classFilter:(nonnull NSString *)classFilter redactionSettingsResolver:(nonnull NSString *)redactionSettingsResolver resolve:(nonnull RCTPromiseResolveBlock)resolve reject:(nonnull RCTPromiseRejectBlock)reject) {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIWindow *keyWindow = nil;
         
@@ -74,31 +83,13 @@ RCT_EXPORT_METHOD(performScan:(NSString *)blinkIdSdkSettings
          blinkIdSessionSettings:[self createDictionaryFromBlinkIdObject:blinkIdSessionSettings]
          blinkIdScanningUxSettings:[self createDictionaryFromBlinkIdObject:blinkIdScanningUxSettings]
          classFilterSettings:[self createDictionaryFromBlinkIdObject:classFilter]
+         redactionSettingsResolver: [self createDictionaryFromBlinkIdObject:redactionSettingsResolver]
          onResolve:^(NSString * _Nonnull result) {
             resolve(@[result]);
         } onReject:^(NSString * _Nonnull error) {
             reject(@"BlinkIdIosError", error, nil);
         }];
     });
-}
-
-RCT_EXPORT_METHOD(performDirectApiScan:(NSString *)blinkIdSdkSettings
-                  blinkIdSessionSettings:(NSString *)blinkIdSessionSettings
-                  firstImage:(NSString *)firstImage
-                  secondImage:(NSString *)secondImage
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
-    [self->moduleImplementation
-     performDirectApiScanWithBlinkIdSdkSettings: [self createDictionaryFromBlinkIdObject: blinkIdSdkSettings]
-     blinkIdSessionSettings: [self createDictionaryFromBlinkIdObject: blinkIdSessionSettings]
-     firstImage:firstImage
-     secondImage:secondImage
-     onResolve:^(NSString * _Nonnull result) {
-        resolve(@[result]);
-    } onReject:^(NSString * _Nonnull error) {
-        reject(@"BlinkIdIosError", error, nil);
-    }];
 }
 
 #ifdef RCT_NEW_ARCH_ENABLED
