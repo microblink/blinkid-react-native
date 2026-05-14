@@ -9,25 +9,7 @@ import {
   Platform,
   SafeAreaView,
 } from "react-native";
-import {
-  BlinkIdScanningSettings,
-  BlinkIdSdkSettings,
-  BlinkIdSessionSettings,
-  ClassFilter,
-  Country,
-  CroppedImageSettings,
-  DocumentFilter,
-  DocumentType,
-  Region,
-  ScanningMode,
-  BlinkIdScanningResult,
-  performScan,
-  performDirectApiScan,
-  DetectionLevel,
-  AnonymizationMode,
-  BlinkIdScanningUxSettings,
-  PreferredCamera,
-} from "@microblink/blinkid-react-native";
+
 
 import { BlinkIdResultBuilder } from "./BlinkIdResultBuilder";
 import { launchImageLibrary } from "react-native-image-picker";
@@ -76,7 +58,7 @@ export default function App() {
        * Set the BlinkID SDK settings
        * Add the license key here from the code above
        */
-      const sdkSettings = new BlinkIdSdkSettings(licenseKey);
+      const sdkSettings = 
       sdkSettings.downloadResources = true;
 
       /**

@@ -37,7 +37,7 @@ if [ "$IS_LOCAL_BUILD" = true ]; then
 
   # Go the sample folder and install the library
   popd > /dev/null
-  npm i --save $blink_id_plugin_path/microblink-blinkid-react-native-7.7.0.tgz
+  npm i --save $blink_id_plugin_path/microblink-blinkid-react-native-8000.0.0.tgz
 
 else
   # Download BlinkID React Native via NPM

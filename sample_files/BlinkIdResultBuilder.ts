@@ -4,7 +4,6 @@ import {
   BarcodeResult,
   BarcodeData,
   DataMatchResult,
-  DataMatchField,
   DateResult,
   DependentInfo,
   DocumentClassInfo,
@@ -13,9 +12,6 @@ import {
   SingleSideScanningResult,
   StringResult,
   VizResult,
-  DataMatchState,
-  MRZDocumentType,
-  BarcodeType,
   VehicleClassInfo,
 } from "@microblink/blinkid-react-native";
 
@@ -26,25 +22,23 @@ export class BlinkIdResultBuilder {
     }
 
     const resultString =
-      this.buildStringResult("Recognition mode", result?.recognitionMode) +
-      "\n" +
       this.buildResult("First name", result.firstName) +
       this.buildResult("Last name", result.lastName) +
       this.buildResult("Full name", result.fullName) +
       this.buildResult("Localized name", result.localizedName) +
       this.buildResult(
         "Additional name info",
-        result.additionalNameInformation
+        result.additionalNameInformation,
       ) +
       this.buildResult("Address", result.address) +
       this.buildResult(
         "Additional address info",
-        result.additionalAddressInformation
+        result.additionalAddressInformation,
       ) +
       this.buildResult("Document number", result.documentNumber) +
       this.buildResult(
         "Additional document number",
-        result.documentAdditionalNumber
+        result.documentAdditionalNumber,
       ) +
       this.buildResult("Sex", result.sex) +
       this.buildResult("Issuing authority", result.issuingAuthority) +
@@ -54,7 +48,7 @@ export class BlinkIdResultBuilder {
       this.buildDateResult("Date of expiry", result.dateOfExpiry) +
       this.buildStringResult(
         "Date of expiry permanent",
-        `${result.dateOfExpiryPermanent}`
+        `${result.dateOfExpiryPermanent}`,
       ) +
       this.buildResult("Martial status", result.maritalStatus) +
       this.buildResult("Personal Id Number", result.personalIdNumber) +
@@ -66,7 +60,7 @@ export class BlinkIdResultBuilder {
       this.buildResult("Certificate number", result.certificateNumber) +
       this.buildResult(
         "National insurace number",
-        result.nationalInsuranceNumber
+        result.nationalInsuranceNumber,
       ) +
       this.buildDriverLicenceResult(result.driverLicenseDetailedInfo) +
       this.buildDataMatchResult(result.dataMatchResult) +
@@ -111,16 +105,16 @@ export class BlinkIdResultBuilder {
       this.buildStringResult("Raw MRZ string", result.rawMRZString) +
       this.buildStringResult(
         "Sanitized document code",
-        result.sanitizedDocumentCode
+        result.sanitizedDocumentCode,
       ) +
       this.buildStringResult(
         "Sanitized document number",
-        result.sanitizedDocumentNumber
+        result.sanitizedDocumentNumber,
       ) +
       this.buildStringResult("Sanitized issuer", result.sanitizedIssuer) +
       this.buildStringResult(
         "Sanitized nationality",
-        result.sanitizedNationality
+        result.sanitizedNationality,
       ) +
       this.buildStringResult("Sanitized Opt1", result.sanitizedOpt1) +
       this.buildStringResult("Sanitized Opt2", result.sanitizedOpt2);
@@ -128,7 +122,7 @@ export class BlinkIdResultBuilder {
     if (result.documentType != undefined) {
       resultString += this.buildStringResult(
         "Document type",
-        MRZDocumentType[result.documentType]
+        result.documentType,
       );
     }
     return resultString == "" ? "" : `MRZ result:\n${resultString}\n`;
@@ -140,12 +134,12 @@ export class BlinkIdResultBuilder {
     const resultString =
       this.buildStringResult(
         "Additional name information",
-        result.additionalNameInformation
+        result.additionalNameInformation,
       ) +
       this.buildStringResult("Address", result.address) +
       this.buildStringResult(
         "Document additional number",
-        result.documentAdditionalNumber
+        result.documentAdditionalNumber,
       ) +
       this.buildStringResult("Document number", result.documentNumber) +
       this.buildStringResult("Employer", result.employer) +
@@ -197,19 +191,19 @@ export class BlinkIdResultBuilder {
       this.buildResult("Document subtype", result.documentSubtype) +
       this.buildResult(
         "Additional optional address information",
-        result.additionalOptionalAddressInformation
+        result.additionalOptionalAddressInformation,
       ) +
       this.buildResult(
         "Additional personal ID number",
-        result.additionalPersonalIdNumber
+        result.additionalPersonalIdNumber,
       ) +
       this.buildResult(
         "Document additional number",
-        result.documentAdditionalNumber
+        result.documentAdditionalNumber,
       ) +
       this.buildResult(
         "Document optional additional number",
-        result.documentOptionalAdditionalNumber
+        result.documentOptionalAdditionalNumber,
       ) +
       this.buildResult("Eligibility category", result.eligibilityCategory) +
       this.buildResult("Father's name", result.fathersName) +
@@ -227,7 +221,7 @@ export class BlinkIdResultBuilder {
       this.buildResult("Sex", result.sex) +
       this.buildResult(
         "Specific document validity",
-        result.specificDocumentValidity
+        result.specificDocumentValidity,
       ) +
       this.buildResult("Sponsor", result.sponsor) +
       this.buildResult("Vehicle owner", result.vehicleOwner) +
@@ -238,7 +232,7 @@ export class BlinkIdResultBuilder {
       this.buildResult("Certificate number", result.certificateNumber) +
       this.buildResult(
         "National insurace number",
-        result.nationalInsuranceNumber
+        result.nationalInsuranceNumber,
       ) +
       this.buildDependentsInfoResult(result.dependentsInfo);
 
@@ -284,7 +278,7 @@ export class BlinkIdResultBuilder {
 
   static buildDateResult<T>(
     propertyName: string,
-    result?: DateResult<T>
+    result?: DateResult<T>,
   ): string {
     if (!result || !result.date || result.date.year === 0) return "";
 
@@ -299,7 +293,7 @@ export class BlinkIdResultBuilder {
     if (result.originalString != undefined) {
       stringResult += `${this.handleStringType(
         "Original date string",
-        result.originalString
+        result.originalString,
       )}`;
     }
 
@@ -339,13 +333,13 @@ export class BlinkIdResultBuilder {
         stringResult +=
           this.buildDateResult(
             "Effective date",
-            vehicleClassInfo.effectiveDate
+            vehicleClassInfo.effectiveDate,
           ) +
           this.buildDateResult("Expiry date", vehicleClassInfo.expiryDate) +
           this.handleStringType("License type", vehicleClassInfo.licenceType) +
           this.handleStringType(
             "Vehicle class",
-            vehicleClassInfo.vehicleClass
+            vehicleClassInfo.vehicleClass,
           ) +
           "\n";
       });
@@ -360,17 +354,13 @@ export class BlinkIdResultBuilder {
 
     let dataMatchResultString =
       dataMatchresult.overallState != undefined
-        ? `\nData match information:\nState for whole document: ${
-            DataMatchState[dataMatchresult.overallState]
-          }\n`
+        ? `\nData match information:\nState for whole document: ${dataMatchresult.overallState}\n`
         : "";
     if (dataMatchresult.states != null || dataMatchresult.states != undefined) {
       for (const fieldState of dataMatchresult?.states) {
         dataMatchResultString +=
           fieldState.field != undefined && fieldState.state != undefined
-            ? `${DataMatchField[fieldState.field]}: ${
-                DataMatchState[fieldState.state]
-              }\n`
+            ? `${fieldState.field}: ${fieldState.state}\n`
             : "";
       }
     }
@@ -378,7 +368,7 @@ export class BlinkIdResultBuilder {
   }
 
   static buildDependentsInfoResult(
-    dependentInfoResult?: DependentInfo[]
+    dependentInfoResult?: DependentInfo[],
   ): string {
     if (dependentInfoResult == null || dependentInfoResult == undefined)
       return "";
@@ -396,7 +386,7 @@ export class BlinkIdResultBuilder {
   }
 
   static buildVehicleCLassesInfo<T>(
-    dependentInfoResult?: VehicleClassInfo<T>[]
+    dependentInfoResult?: VehicleClassInfo<T>[],
   ): string {
     if (dependentInfoResult == null || dependentInfoResult == undefined)
       return "";
@@ -418,14 +408,11 @@ export class BlinkIdResultBuilder {
 
     return (
       (barcodeDataResult.barcodeType != undefined
-        ? this.buildStringResult(
-            "Barcode type",
-            BarcodeType[barcodeDataResult.barcodeType]
-          )
+        ? this.buildStringResult("Barcode type", barcodeDataResult.barcodeType)
         : "") +
       this.buildStringResult(
         "Barcode string data",
-        barcodeDataResult.stringData
+        barcodeDataResult.stringData,
       )
     );
   }
