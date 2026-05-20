@@ -54,6 +54,17 @@ pushd android || exit 1
 # Patch the build.gradle to add "maven { url https://maven.microblink.com }"" repository
 perl -i~ -pe "BEGIN{$/ = undef;} s/maven \{/maven \{ url 'https:\\/\\/maven.microblink.com' }\n        maven {/" build.gradle
 
+# Fix node/npx path resolution for Android Studio (Gradle daemon doesn't inherit shell PATH)
+# Use process.execPath to get the real node binary path, not a symlink that the JVM may fail to resolve
+NODE_EXEC=$(node -e "console.log(process.execPath)")
+NODE_DIR=$(dirname "$NODE_EXEC")
+
+# Patch settings.gradle to use the full npx path for autolinking
+sed -i '' "s|ex.autolinkLibrariesFromCommand()|ex.autolinkLibrariesFromCommand([\"$NODE_DIR/npx\", \"@react-native-community/cli\", \"config\"])|" settings.gradle
+
+# Patch app/build.gradle to use the full node path for codegen and bundling
+sed -i '' "s|// nodeExecutableAndArgs = \[\"node\"\]|nodeExecutableAndArgs = [\"$NODE_DIR/node\"]|" app/build.gradle
+
 # Return from the android project folder
 popd
 
@@ -62,6 +73,33 @@ pushd ios || exit 1
 
 # Force minimal iOS version
 sed -i '' "s/platform :ios, min_ios_version_supported/platform :ios, '16.0'/" Podfile
+
+# Fix fmt compilation errors with newer Xcode/Clang:
+# React Native 0.82 uses C++20, which causes the fmt library to use a C++20 feature called
+# 'consteval' that doesn't work reliably on iOS. By compiling just the fmt pod with C++17,
+# fmt disables consteval and uses a compatible fallback instead. The rest of the app still
+# uses C++20. This is like using a different NDK C++ standard for a single native library.
+python3 << 'PYEOF'
+with open('Podfile', 'r') as f:
+    content = f.read()
+
+fmt_fix = """
+    installer.pods_project.targets.each do |target|
+      if target.name == 'fmt'
+        target.build_configurations.each do |config|
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
+        end
+      end
+    end
+"""
+
+old = "      # :ccache_enabled => true\n    )\n  end\nend"
+new = "      # :ccache_enabled => true\n    )" + fmt_fix + "  end\nend"
+content = content.replace(old, new)
+
+with open('Podfile', 'w') as f:
+    f.write(content)
+PYEOF
 
 # Add the camera and photo usage descriptions into Info.plist to enable camera scanning and the image upload via gallery
 sed -i '' '/<dict>/a\
