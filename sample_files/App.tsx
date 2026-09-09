@@ -45,9 +45,9 @@ export default function App() {
   /// Add a valid license key, based on the platform.
   /// A valid license key can be obtained from the Microblink Developer Hub: https://developer.microblink.com
   const licenseKey = Platform.select({
-    ios: "sRwCACBjb20ubWljcm9ibGluay5zYW1wbGVSZWFjdE5hdGl2ZQEKbWljcm9ibGlua4qOLmpWqDdEZeRf8J/uD6HCbR3dqoWCPNkLapaK9SemOW02sTVcvjDrxz98BG0vjco2u7WSllgeowQWRiz3j6ggcrBWJwG6ETtI37Lb6OrwllrgWMo/rsLXqAZzKhKhWsXNYfGOdTUg/wIV0si8tlgOKfWuJPnrto8Mcg==",
+    ios: "sRwCABVjb20ubWljcm9ibGluay5zYW1wbGUBbGV5SkRjbVZoZEdWa1QyNGlPakUzT0RnNU16YzBOVGN3TnpBc0lrTnlaV0YwWldSR2IzSWlPaUprWkdRd05qWmxaaTAxT0RJekxUUXdNRGd0T1RRNE1DMDFORFU0WWpBeFlUVTJZamdpZlE9PeedI+x0vxjtlmzYEtWTK+S/ovjOlhqMmCKLisYbh/LyT9QoPkwI9Tz62mq+nKcT/RYs3vDn7T3mzTjtZ+NEDX9Eoipwt6h8AEKw9ASUMpleYUQPizdpOdw9kbU08Q==",
     android:
-      "sRwCACBjb20ubWljcm9ibGluay5zYW1wbGVSZWFjdE5hdGl2ZQAKbWljcm9ibGlua1ShMS27WHnPF52mrdhS8HXMfsULzqnSVp/i20wH8Zi7tVQulz6OoEr0cYl4V8MwCgfj7bL5IYUtm4IuJiCkXxh3Bl01LbzKe6nzrtNsOkGjJMal09bWq/Y2oYBVHTDTnhym7R+ovqBsuVjc5fRs/YZLAPShIU46p6mdlg==",
+      "sRwCABVjb20ubWljcm9ibGluay5zYW1wbGUAbGV5SkRjbVZoZEdWa1QyNGlPakUzT0RnNU16Y3hPVGMwTnpVc0lrTnlaV0YwWldSR2IzSWlPaUprWkdRd05qWmxaaTAxT0RJekxUUXdNRGd0T1RRNE1DMDFORFU0WWpBeFlUVTJZamdpZlE9PVwOW5CxXmcyT1b0xkuJj6fsRxytRnpnssH6wmeManQtKT+2J77qceytDcD+KcHUrVCGxnRxpnSbG36m9wrdrob43zbWA8md1fX6q39clBhQp3Q4dqjJcBKZ9DxlOQ==",
   })!;
 
   const microblinkProxyURL: string | undefined = undefined;
