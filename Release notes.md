@@ -1,3 +1,161 @@
+## v8001.0.0
+
+Updated to BlinkID native SDKs **v8001.0.0** (Android & iOS). See also the [platform release notes](https://docs.microblink.com/blinkid/release-notes).
+
+### What's new
+- Accelerated support for newly issued documents
+  - Optimized document support and extraction pipeline to reduce time-to-production for newly issued identity documents, and to apply document-rule / knowledge improvements without a full SDK upgrade when possible.
+  - Zero-day readiness: depending on design availability and when a new document begins circulating, BlinkID can deliver 0-day support—and at a maximum, within 4 weeks of the document's release.
+  - Future-proof compliance: workflows can adapt to global document updates faster than before.
+- Enhanced frame selection & image quality
+  - Smart quality selection: analyzes multiple frames and selects a crisp, stable image before extraction.
+  - Higher first-pass success by filtering blurry or unstable frames early.
+  - Flexible speed vs. quality tuning via `documentCaptureModule.inputImageSelectionStrategy` (camera / video flow).
+- Enhanced DirectAPI / photo-mode intelligence
+  - `documentCaptureModule.cropType` replaces the former boolean cropped-image flag (`"not-cropped"` | `"unknown"` | `"cropped"`).
+  - `"cropped"` and `"unknown"` apply to **DirectAPI (photo)** flows only; camera UX (`performScan`) requires `"not-cropped"`.
+- Expanded & improved barcode capabilities
+  - Aztec barcode support via `barcodeModule.aztecScanningEnabled`.
+  - Improved speed and accuracy for QR, DataMatrix, and selected 1D formats.
+- Parsing & extraction improvements
+  - Improved Persian digit recognition for regional documents.
+- Mandatory data redaction: Netherlands DL QR code added to the redacted list.
+- OTA (over-the-air) resources: configure separately from base ML resources via `BlinkIdSdkSettings.otaResourcesConfig` (see [API changes](#api-changes-v8001) below).
+- Added `refreshLicenseLease` to refresh the BlinkID SDK license lease while the SDK is initialized (see [API changes](#api-changes-v8001) below).
+
+### Bug fixes
+- Document swap data caching: fixed an issue in continuous-video mode where data from a previously scanned document could persist after a new document was introduced. The SDK now detects document swaps and clears cached images (cropped faces, signatures, barcodes, etc.) to prevent cross-contamination.
+- Fixed `resourcesConfig.requestTimeout` and `otaResourcesConfig.requestTimeout`: custom timeout values are now applied on Android and iOS (previously ignored on iOS; Android accepted a single number only).
+
+### New documents support
+- Bailiwick Of Jersey - Driver's License
+- Bailiwick Of Jersey - Paper Passport
+- Bailiwick Of Jersey - Polycarbonate Passport
+- Botswana - Driver's License
+- Brunei - Polycarbonate Passport
+- Democratic Republic Of The Congo - Polycarbonate Passport
+- Dominican Republic - Polycarbonate Passport
+- Eswatini - Driver's License
+- Gambia - Driver's License
+- Georgia - Residence Permit
+- Iceland - Identity Card
+- Iceland - Residence Permit
+- Japan - Specified Residence Card
+- Liechtenstein - Residence Permit
+- Liechtenstein - Resident ID
+- Mali - Polycarbonate Passport
+- Mauritania - Resident ID
+- Monaco - Identity Card
+- Monaco - Residence Permit
+- Nepal - Identity Card
+- Palestine - Identity Card
+- San Marino - Identity Card
+- Sudan - Driver's License
+- UK, Northern Ireland - Voter ID
+- USA, Arkansas - Medical Marijuana ID
+- USA, Massachusetts - Medical Marijuana ID
+- USA, Michigan - Medical Marijuana ID
+- USA, New Jersey - Medical Marijuana ID
+- Zambia - Residence Permit
+
+#### New document versions for supported documents
+- Bolivia - Driver's License
+- Burkina Faso - Identity Card
+- Central African Republic - Paper Passport
+- Estonia - Identity Card
+- Dominican Republic - Identity Card
+- Guyana - Identity Card
+- Israel - Identity Card
+- Luxembourg - Polycarbonate Passport
+- Mexico, Baja California - Driver's License
+- Mexico, Hidalgo - Driver's License
+- Oman - Identity Card
+- Oman - Resident ID
+- Uruguay - Identity Card
+- USA, Mississippi - Identity Card
+- USA, Nebraska - Driver's License
+- USA, Nebraska - Identity Card
+- USA, North Carolina - Identity Card
+- USA, Oklahoma - Driver's License
+- USA, Oklahoma - Identity Card
+- USA, Texas - Weapon Permit
+
+#### New extracted fields from documents
+- Brazil national identity card and regional (22 regions) identity cards now extract parent names (`parentsInfo`).
+- Croatia identity card: added support for cyrillic values in `sex`, `address`, `issuingAuthority`, `lastName` and `firstName`, and latin `sex`.
+- Virgin Islands of the United States identity card and driver's license: added `documentSubtype` and `specificDocumentValidity`.
+- Tunisia identity card: added arab values for `lastName`, `firstName`, `placeOfBirth`; added `dateOfBirth`.
+- Argentina identity card and alien identity card: use `cardAccessNumber` instead of `documentAdditionalNumber`.
+
+### Requirements
+- React Native **0.82.x** or newer (built and tested; backward compatible with the old architecture)
+- iOS **16.0** or newer
+- Android API level **24** or newer; **compileSdk 36**; **Kotlin 2.2.21**
+- Integrator apps do **not** need Jetpack Compose setup; Compose is used internally by BlinkID UX
+
+### <a name="api-changes-v8001"></a> API changes
+
+#### Document class info (breaking)
+- `DocumentClassInfo.country`, `region`, and `documentType` are now nested objects `{ id?: CountryID | RegionID | DocumentTypeID; rawValue: string }` instead of flat enum/string values.
+  - Use `id` for known, build-time classifications (same role as the old flat enums).
+  - Use `rawValue` when OTA introduces classifications not yet present in the typed enums.
+- `ClassFilter` / `DocumentFilter` stay **flat**: pass `CountryID` / `RegionID` / `DocumentTypeID` on the filter (not the nested result shape).
+
+#### Document capture & barcode settings
+- `documentCaptureModule.inputImageCropped` (boolean) → `documentCaptureModule.cropType`: `"not-cropped"` | `"unknown"` | `"cropped"` (default `"not-cropped"`).
+- Added `documentCaptureModule.inputImageSelectionStrategy`: `"single-image"` | `"optimize-for-speed"` | `"balanced"` | `"optimize-for-quality"` (camera / video; default `"balanced"`).
+- Added `barcodeModule.aztecScanningEnabled` (default `false`).
+
+#### Scanning results
+- Added `ethnicity` on `BlinkIdScanningResult` and `VizResult`.
+- Added `fullName` on `ParentInfo`.
+- Added `FieldType.ParentFullName` and `FieldType.Ethnicity` for redaction.
+
+#### License lease refresh
+- Added `refreshLicenseLease()` — refreshes the BlinkID SDK license lease. Can be called periodically to maintain an active license status; the required frequency depends on your license configuration. The SDK must already be initialized (via `loadBlinkIdSdk` or a scanning method) before calling this method.
+
+#### SDK settings: nested resources + OTA (breaking for customized resource fields)
+Flat resource fields on `BlinkIdSdkSettings` move into nested configs. `resourcesConfig.requestTimeout` and `otaResourcesConfig.requestTimeout` are [`RequestTimeout`](BlinkID/src/blinkIdSettings.ts) (three optional millisecond fields), not `number`. Omit `requestTimeout` or unset fields to keep native defaults (30 seconds per timeout on current BlinkID native SDKs).
+
+| Old (flat) | New |
+|---|---|
+| `downloadResources` | `resourcesConfig.download` |
+| `resourceDownloadUrl` | `resourcesConfig.serviceUrl` |
+| `resourceLocalFolder` | `resourcesConfig.localFolder` |
+| `resourceRequestTimeout` | `resourcesConfig.requestTimeout` ([`RequestTimeout`](BlinkID/src/blinkIdSettings.ts), milliseconds) |
+| `bundleIdentifier` | `resourcesConfig.bundleIdentifier` (iOS) |
+
+New optional `otaResourcesConfig`:
+
+| Field | Default | Notes |
+|---|---|---|
+| `checkForUpdates` | `true` | When `false`, skips update checks; first-run download still occurs if OTA resources are missing locally |
+| `strict` | `false` | When `true`, SDK init fails if an OTA update download fails |
+| `serviceUrl` | `https://blinkid-ota.microblink.com` | Do not cross-wire with base resources URL |
+| `localFolder` | platform default (`microblink/blinkid/ota` on Android, `OTAMLModels` on iOS) | Keep separate from base `resourcesConfig.localFolder` |
+| `requestTimeout` | native default (30 s per timeout) | Milliseconds; [`RequestTimeout`](BlinkID/src/blinkIdSettings.ts) with `connectionTimeoutMilliseconds`, `writeTimeoutMilliseconds`, `readTimeoutMilliseconds`; omit unset fields to keep native default for that timeout |
+| `bundleIdentifier` | — | iOS prebundled OTA resources |
+
+Minimal `{ licenseKey }` (and optional `resourcesConfig: { download: true }`) still works; OTA uses native defaults when `otaResourcesConfig` is omitted.
+
+```ts
+const sdkSettings: BlinkIdSdkSettings = {
+  licenseKey,
+  resourcesConfig: {
+    download: true,
+    // serviceUrl / localFolder optional — platform defaults apply
+    // requestTimeout: { connectionTimeoutMilliseconds: 30000, writeTimeoutMilliseconds: 30000, readTimeoutMilliseconds: 30000 },
+  },
+  otaResourcesConfig: {
+    checkForUpdates: true,
+    strict: false,
+  },
+};
+```
+
+#### Not exposed in React Native
+Native intermediate analysis APIs added in v8001 (e.g. process/analysis crop signals, `AwaitingMoreStableInputImages`, `vizExtractionType`) are **not** part of the React Native public API. RN continues to expose session settings and final `BlinkIdScanningResult` only.
+
 ## v8000.0.0
 
 ### What's new

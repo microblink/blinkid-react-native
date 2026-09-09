@@ -110,6 +110,12 @@ export type BlinkIdScanningResult = {
   race?: StringResult;
 
   /**
+   * The ethnicity of the document owner.
+   *
+   */
+  ethnicity?: StringResult;
+
+  /**
    * The religion of the document owner.
    *
    */

@@ -24,7 +24,7 @@ apply plugin: "com.facebook.react"
 // Minimum Compose runtime versions required by blinkid-ux for camera scanning (performScan).
 // These are enforced as lower bounds only; client apps may use newer Compose versions.
 ext {
-  blinkidUxVersion = "8000.0.0"
+  blinkidUxVersion = "8001.0.2"
   blinkidUxMinComposeUi = "1.11.2"
   blinkidUxMinMaterial3 = "1.4.0"
   blinkidUxMinActivityCompose = "1.13.0"

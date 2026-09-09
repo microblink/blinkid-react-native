@@ -1,4 +1,40 @@
 /**
+ * Specifies whether the input image is already cropped, likely cropped, or not
+ * cropped.
+ *
+ * - `"not-cropped"`: The image is considered raw and goes through document
+ *   detection and perspective correction.
+ * - `"unknown"`: The image may already be cropped. The recognizer first tries
+ *   cropped processing and falls back to detection if extraction fails.
+ * - `"cropped"`: The input image must contain only the cropped and
+ *   perspective-corrected document.
+ */
+export type InputImageCropType = "not-cropped" | "unknown" | "cropped";
+
+/**
+ * Controls how the best input image is selected from a pool of stable frames.
+ *
+ * Before the best-quality image is selected, a sequence of stable input images
+ * must be collected. An input image is considered stable when image analysis
+ * results are consistent across consecutive frames. A larger pool increases the
+ * likelihood of capturing a high-quality image but may introduce a slight delay.
+ *
+ * - `"single-image"`: Selects the first acceptable stable input image.
+ * - `"optimize-for-speed"`: Faster processing; may select a lower-quality image
+ *   because a smaller pool of stable input images is considered.
+ * - `"balanced"`: Trade-off between quality and speed.
+ * - `"optimize-for-quality"`: Slower processing to select a high-quality input
+ *   image because a larger pool of stable input images is considered.
+ *
+ * Applicable only to `Video` input sources.
+ */
+export type InputImageSelectionStrategy =
+  | "single-image"
+  | "optimize-for-speed"
+  | "balanced"
+  | "optimize-for-quality";
+
+/**
  * Settings for the barcode extraction module.
  *
  * This module manages the detection and data extraction from various 1D and 2D
@@ -100,6 +136,13 @@ export type BarcodeModuleSettings = {
    * This setting can be enabled only if `documentCaptureEnabled` is disabled.
    */
   dataMatrixScanningEnabled: boolean;
+
+  /*
+   * Enables the scanning and processing of Aztec barcodes.
+   *
+   * This setting can be enabled only if `documentCaptureEnabled` is disabled.
+   */
+  aztecScanningEnabled: boolean;
 };
 
 /*
@@ -111,12 +154,22 @@ export type BarcodeModuleSettings = {
  */
 export type DocumentCaptureModuleSettings = {
   /*
-   * Indicates whether the input image is already cropped and perspective-corrected.
+   * Specifies whether the input image is already cropped, likely cropped, or
+   * not cropped.
    *
-   * Requires the input image to consist solely of the cropped document image with perspective correction applied.
-   * This only applies to images from the DirectAPI method of scanning — with images from the default scanning, the setting will be ignored.
+   * When set to `"cropped"`, the input image must consist solely of the already
+   * cropped and corrected document.
+   *
+   * When set to `"unknown"`, the recognizer first attempts extraction as if the
+   * image is cropped, then falls back to the regular localization pipeline if
+   * extraction fails.
+   *
+   * `"cropped"` and `"unknown"` are applicable only to `Photo` sources and will
+   * cause a validation error for `Video`.
+   *
+   * Default value is `"not-cropped"`.
    */
-  inputImageCropped: boolean;
+  cropType: InputImageCropType;
 
   /*
    * Enables the scanning and processing of unsupported document types.
@@ -188,8 +241,7 @@ export type DocumentCaptureModuleSettings = {
    * to be stored with adequate margins in the image.
    *
    * Default value is `0.02`.
-   * The setting is applicable only when using images from `Video` source.
-   * The setting is ignored if `inputImageCropped == true`.
+   * The setting is applicable only when using images from `video` source.
    *
    * Allowed minimal value is `0.0` and maximum value is `1.0`.
    */
@@ -273,9 +325,23 @@ export type DocumentCaptureModuleSettings = {
    *
    * If `true`, occluded images will be excluded from further processing.
    *
-   * This setting is applicable only if `inputImageCropped == false`.
+   * Default behavior depends on `cropType`:
+    * - `Cropped`: Defaults to `false`. This setting is not applicable when
+    *    the detector is skipped. Setting this to `true` while `cropType` is
+    *    `Cropped` will result in a settings validation failure.
+    * - `NotCropped` / `Unknown`: Defaults to `true`. Images with hand
+    *    occlusion are rejected.
    */
   imageWithHandOcclusionRejected: boolean;
+
+  /*
+   * The strategy used to select the best input image from a pool of stable
+   * input images.
+   *
+   * Default value is `"balanced"`.
+   * Applicable only to `Video` input sources.
+   */
+  inputImageSelectionStrategy: InputImageSelectionStrategy;
 };
 
 /*
@@ -359,7 +425,8 @@ export type VizModuleSettings = {
 
 /**
  * ClassFilter represents the document filter used to determine which documents will be processed.
- * Document information (Country, Region, Type) is evaluated with the content set in the filter, and their inclusion or exclusion depends on the defined rules.
+ * Document information ({@link CountryID}, {@link RegionID}, {@link DocumentTypeID}) is evaluated
+ * with the content set in the filter, and their inclusion or exclusion depends on the defined rules.
  * To set the document information, use {@link DocumentFilter}.
  * The recognition results of the excluded documents will not be returned.
  * If using the standard BlinkID UX, an alert will be displayed that the document will not be scanned.
@@ -375,16 +442,14 @@ export type ClassFilter = {
    *
    * Example usage:
    *
-   *  ```
-   *   final classFilter = ClassFilter();
-   *    classFilter.includeDocuments = [
-   *      DocumentFilter.country(Country.Usa),
-   *      DocumentFilter.countryType(Country.Croatia, DocumentType.Id),
-   *    ];
-   *
-   *
-   *  ```
-   *
+   * ```ts
+   * const classFilter: ClassFilter = {
+   *   includeDocuments: [
+   *     { country: CountryID.USA },
+   *     { country: CountryID.Croatia, documentType: DocumentTypeID.Id },
+   *   ],
+   * };
+   * ```
    *
    * NOTE: from the example above, the class filter is set to only accept all documents from USA, and Croatian IDs.
    * All other documents will be rejected.
@@ -402,20 +467,20 @@ export type ClassFilter = {
    *
    * Example usage:
    *
-   *  ```
-   *   final classFilter = ClassFilter();
-   *    classFilter.excludeDocuments = [
-   *      DocumentFilter.country(Country.Usa),
-   *      DocumentFilter.countryType(Country.Croatia, DocumentType.Id),
-   *    ];
-   *
-   *
-   *  ```
+   * ```ts
+   * const classFilter: ClassFilter = {
+   *   excludeDocuments: [
+   *     { country: CountryID.USA },
+   *     { country: CountryID.Croatia, documentType: DocumentTypeID.Id },
+   *   ],
+   * };
+   * ```
    *
    * NOTE: from the example above, the class filter is set to only exclude all documents from USA, and Croatian IDs.
    * All other classes will be accepted.
    *
-   * Rules can be combined, for example, to set all three properties (Country Region, Type), two (e.g., Country and Type) or just one (e.g, Region).
+   * Rules can be combined, for example, to set all three properties (country, region, documentType),
+   * two (e.g. country and documentType) or just one (e.g. region).
    *
    * See {@link DocumentFilter} for setting the combinations.
    */
@@ -455,22 +520,28 @@ export type RedactionSettingsResolver = {
  */
 export type DocumentFilter = {
   /**
-   * If set, only specified country will pass the filter criteria.
-   * Otherwise, issuing country will not betaken into account.
+   * If set, only the specified country will pass the filter criteria.
+   * Otherwise, issuing country will not be taken into account.
+   *
+   * See {@link CountryID}.
    */
-  country?: Country;
+  country?: CountryID;
 
   /**
    * If set, only specified country will pass the filter criteria.
    * Otherwise, issuing region will not be taken into account.
+   *
+   * See {@link RegionID}.
    */
-  region?: Region;
+  region?: RegionID;
 
   /**
-   * If set, only specified type will pass the filter criteria.
-   * Otherwise, issuing type will not be taken into account.
+   * If set, only the specified document type will pass the filter criteria.
+   * Otherwise, document type will not be taken into account.
+   *
+   * See {@link DocumentTypeID}.
    */
-  documentType?: DocumentType;
+  documentType?: DocumentTypeID;
 };
 
 /**
@@ -573,6 +644,39 @@ export type DocumentNumberRedactionSettings = {
 };
 
 /**
+ * Document country classification from {@link DocumentClassInfo}.
+ *
+ * When the value is known at SDK build time, both {@link id} and {@link rawValue}
+ * are populated. For OTA-supported / unknown documents, {@link id} may be omitted
+ * while {@link rawValue} is still set. A missing country is represented by omitting
+ * {@link DocumentClassInfo.country} entirely (native `"NONE"`).
+ */
+export type Country = {
+  id?: CountryID;
+  rawValue: string;
+};
+
+/**
+ * Document region classification from {@link DocumentClassInfo}.
+ *
+ * See {@link Country} for how {@link id} vs {@link rawValue} are filled.
+ */
+export type Region = {
+  id?: RegionID;
+  rawValue: string;
+};
+
+/**
+ * Document type classification from {@link DocumentClassInfo}.
+ *
+ * See {@link Country} for how {@link id} vs {@link rawValue} are filled.
+ */
+export type DocumentType = {
+  id?: DocumentTypeID;
+  rawValue: string;
+};
+
+/**
  * Represents the document class information.
  *
  */
@@ -583,6 +687,7 @@ export type DocumentClassInfo = {
    * See {@link Country} for more information.
    */
   country?: Country;
+
   /**
    * The document region.
    *
@@ -591,7 +696,7 @@ export type DocumentClassInfo = {
   region?: Region;
 
   /**
-   * The type of the scanned document.
+   * The document type classification.
    *
    * See {@link DocumentType} for more information.
    */
@@ -605,25 +710,21 @@ export type DocumentClassInfo = {
 
   /**
    * The name of the country that issued the scanned document.
-   *
    */
   countryName?: string;
 
   /**
    * The ISO numeric code of the country that issued the scanned document.
-   *
    */
   isoNumericCountryCode?: string;
 
   /**
    * The 2 letter ISO code of the country that issued the scanned document.
-   *
    */
   isoAlpha2CountryCode?: string;
 
   /**
    * The 3 letter ISO code of the country that issued the scanned document.
-   *
    */
   isoAlpha3CountryCode?: string;
 };
@@ -1137,6 +1238,12 @@ export type VizResult = {
    *
    */
   race?: StringResult;
+
+  /**
+   * The ethnicity of the document owner.
+   *
+   */
+  ethnicity?: StringResult;
 
   /**
    * The religion of the document owner.
@@ -2695,6 +2802,11 @@ export type ParentInfo = {
    * The last name of one of the document owner's parents.
    */
   lastName?: StringResult;
+
+  /**
+   * The full name of one of the document owner's parents.
+   */
+  fullName?: StringResult;
 };
 
 /**
@@ -3030,7 +3142,7 @@ export type DataMatchState =
  * Document country.
  *
  */
-export const Country = {
+export const CountryID = {
   None: "none",
 
   Albania: "albania",
@@ -3548,12 +3660,12 @@ export const Country = {
   SaintThomasAndPrince: "saintThomasAndPrince",
 } as const;
 
-export type Country = (typeof Country)[keyof typeof Country];
+export type CountryID = (typeof CountryID)[keyof typeof CountryID];
 
 /**
  * Document region.
  */
-export const Region = {
+export const RegionID = {
   None: "none",
 
   Alabama: "alabama",
@@ -3790,13 +3902,13 @@ export const Region = {
 
   QuintanaRooCozumel: "quintanaRooCozumel",
 
-  SanPaolo: "saoPaolo",
+  SaoPaolo: "saoPaolo",
 
-  RioDeJaniero: "rioDeJaneiro",
+  RioDeJaneiro: "rioDeJaneiro",
 
   RioGrandeDoSul: "rioGrandeDoSul",
 
-  NorthWestTerritories: "northWestTerritories",
+  NorthwestTerritories: "northwestTerritories",
 
   Nunavut: "nunavut",
 
@@ -3830,7 +3942,7 @@ export const Region = {
 
   Sergipe: "sergipe",
 
-  Alagos: "alagos",
+  Alagoas: "alagoas",
 
   Bangsamoro: "bangsamoro",
 
@@ -3855,13 +3967,13 @@ export const Region = {
   Uttarakhand: "uttarakhand",
 } as const;
 
-export type Region = (typeof Region)[keyof typeof Region];
+export type RegionID = (typeof RegionID)[keyof typeof RegionID];
 
 /**
  * Document type.
  *
  */
-export const DocumentType = {
+export const DocumentTypeID = {
   None: "none",
 
   ConsularId: "consularId",
@@ -3966,7 +4078,7 @@ export const DocumentType = {
 
   MinorsPublicServicesCard: "minorsPublicServicesCard",
 
-  DrivingPriviligeCard: "drivingPriviligeCard",
+  DrivingPrivilegeCard: "drivingPrivilegeCard",
 
   AsylumRequest: "asylumRequest",
 
@@ -3998,7 +4110,7 @@ export const DocumentType = {
 
   AfghanCitizenCard: "afghanCitizenCard",
 
-  EId: "eId",
+  Eid: "eid",
 
   Pass: "pass",
 
@@ -4046,7 +4158,7 @@ export const DocumentType = {
 
   OriginCard: "originCard",
 } as const;
-export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
+export type DocumentTypeID = (typeof DocumentTypeID)[keyof typeof DocumentTypeID];
 /**
  * Represents all possible field types that can be extracted from the document.
  *
@@ -4195,6 +4307,10 @@ export const FieldType = {
   HusbandName: "husbandName",
 
   CardAccessNumber: "cardAccessNumber",
+
+  ParentFullName: "parentFullName",
+
+  Ethnicity: "ethnicity",
 } as const;
 
 export type FieldType = (typeof FieldType)[keyof typeof FieldType];

@@ -145,6 +145,46 @@ export function OptionalEnumDropdown<T extends string>({
   );
 }
 
+export function StringSettingField({
+  label,
+  value,
+  onChanged,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChanged: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [text, setText] = useState(value);
+
+  useEffect(() => {
+    setText(value);
+  }, [value]);
+
+  const commit = () => {
+    onChanged(text.trim());
+  };
+
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={styles.textInput}
+        value={text}
+        onChangeText={setText}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        placeholder={placeholder}
+        returnKeyType="done"
+        onSubmitEditing={commit}
+        onBlur={commit}
+      />
+    </View>
+  );
+}
+
 export function IntSettingField({
   label,
   value,

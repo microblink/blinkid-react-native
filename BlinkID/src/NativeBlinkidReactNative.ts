@@ -112,6 +112,17 @@ export interface Spec extends TurboModule {
     secondImage?: string,
     redactionSettings?: string,
   ): Promise<string>;
+
+  /**
+   * The `refreshLicenseLease` Turbo Module method refreshes the BlinkID SDK license lease.
+   *
+   * This method can be called periodically to maintain an active license status.
+   * The frequency of refresh calls depends on your license configuration.
+   *
+   * The BlinkID SDK must already be initialized (by calling {@link loadBlinkIdSdk}
+   * or any of the scanning methods) before calling this method.
+   */
+  refreshLicenseLease(): Promise<void>;
 }
 
 const BlinkidReactNative: Spec =

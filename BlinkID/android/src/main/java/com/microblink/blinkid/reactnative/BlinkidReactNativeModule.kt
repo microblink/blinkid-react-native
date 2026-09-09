@@ -234,6 +234,21 @@ class BlinkidReactNativeModule(reactContext: ReactApplicationContext) :
     }
   }
 
+  override fun refreshLicenseLease(promise: Promise?) {
+    CoroutineScope(Dispatchers.Main).launch {
+      try {
+        val sdk = BlinkIdSdk.sdkInstance
+          ?: throw IllegalStateException(
+            "The BlinkID SDK is not initialized. Call loadBlinkIdSdk() first, or perform a scan."
+          )
+        sdk.refreshLicenseLease()
+        promise?.resolve(null)
+      } catch (error: Exception) {
+        promise?.reject(BLINKID_ERROR_RESULT_CODE, error.message)
+      }
+    }
+  }
+
   private suspend fun ensureLoadedSdk(blinkidSdkSettings: JSONObject?): BlinkIdSdk? {
 
     blinkIdSdk?.let { return it }

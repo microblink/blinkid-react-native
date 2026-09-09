@@ -1,10 +1,4 @@
 framework module BlinkID {
-    umbrella header "BlinkID.h"
-
-    export *
-}
-
-module BlinkID.Swift {
-  header "BlinkID-Swift.h"
+  header "BlinkID.h"
   requires objc
 }

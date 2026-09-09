@@ -83,6 +83,9 @@ object BlinkIdSerializationUtilities {
         scanningResult?.race?.let {
             scanningResultJson.put("race", serializeStringResult(it))
         }
+        scanningResult?.ethnicity?.let {
+            scanningResultJson.put("ethnicity", serializeStringResult(it))
+        }
         scanningResult?.religion?.let {
             scanningResultJson.put("religion", serializeStringResult(it))
         }
@@ -296,19 +299,23 @@ object BlinkIdSerializationUtilities {
 
     private fun serializeDocumentClassInfo(documentClassInfo: DocumentClassInfo): JSONObject {
         val documentClassInfoJson = JSONObject()
-        // TODO: Align country/region/documentType strings with iOS (rawValue). Android uses
-        // enum.name with only the first character lowercased; values usually match but are not
-        // guaranteed identical for every enum. Prefer shared explicit string mappers on both platforms.
-        documentClassInfo.country?.name?.let {
-            documentClassInfoJson.put("country", it.replaceFirstChar { char -> char.lowercase() })
+        documentClassInfo.country?.let { country ->
+            documentClassInfoJson.put("country", serializeClassInfoComponent(
+                id = country.id?.let { BlinkIdClassInfoIdMappings.serializeCountryId(it) },
+                rawValue = country.rawValue
+            ))
         }
-        documentClassInfo.region?.name?.let {
-            documentClassInfoJson.put("region", it.replaceFirstChar { char -> char.lowercase() })
+        documentClassInfo.region?.let { region ->
+            documentClassInfoJson.put("region", serializeClassInfoComponent(
+                id = region.id?.let { BlinkIdClassInfoIdMappings.serializeRegionId(it) },
+                rawValue = region.rawValue
+            ))
         }
-        documentClassInfo.type?.name?.let {
-            documentClassInfoJson.put(
-                "documentType",
-                it.replaceFirstChar { char -> char.lowercase() })
+        documentClassInfo.documentType?.let { documentType ->
+            documentClassInfoJson.put("documentType", serializeClassInfoComponent(
+                id = documentType.id?.let { BlinkIdClassInfoIdMappings.serializeDocumentTypeId(it) },
+                rawValue = documentType.rawValue
+            ))
         }
         documentClassInfo.countryName?.let {
             documentClassInfoJson.put("countryName", it)
@@ -322,8 +329,24 @@ object BlinkIdSerializationUtilities {
         documentClassInfo.isoNumericCountryCode?.let {
             documentClassInfoJson.put("isoNumericCountryCode", it)
         }
-        documentClassInfoJson.put("empty", documentClassInfo.isEmpty())
+        documentClassInfoJson.put("empty", isDocumentClassInfoEmpty(documentClassInfo))
         return documentClassInfoJson
+    }
+
+    private fun isDocumentClassInfoEmpty(documentClassInfo: DocumentClassInfo): Boolean {
+        val classIds = listOf(
+            documentClassInfo.country?.id?.name,
+            documentClassInfo.region?.id?.name,
+            documentClassInfo.documentType?.id?.name
+        )
+        return classIds.any { it == null } || classIds.all { it == "None" }
+    }
+
+    private fun serializeClassInfoComponent(id: String?, rawValue: String): JSONObject {
+        val json = JSONObject()
+        id?.let { json.put("id", it) }
+        json.put("rawValue", rawValue)
+        return json
     }
 
     private fun serializeDataMatchResult(dataMatchResult: DataMatchResult): JSONObject {
@@ -731,6 +754,9 @@ object BlinkIdSerializationUtilities {
         vizResult?.race?.let {
             vizResultJson.put("race", serializeStringResult(it))
         }
+        vizResult?.ethnicity?.let {
+            vizResultJson.put("ethnicity", serializeStringResult(it))
+        }
         vizResult?.religion?.let {
             vizResultJson.put("religion", serializeStringResult(it))
         }
@@ -856,6 +882,10 @@ object BlinkIdSerializationUtilities {
 
         parentInfo.lastName?.let {
             parentInfoJson.put("lastName", serializeStringResult(it))
+        }
+
+        parentInfo.fullName?.let {
+            parentInfoJson.put("fullName", serializeStringResult(it))
         }
 
         return parentInfoJson

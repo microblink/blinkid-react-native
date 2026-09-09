@@ -4,12 +4,16 @@ import type {
   BarcodeModuleSettings,
   DocumentCaptureModuleSettings,
   SensitivityLevel,
+  InputImageCropType,
+  InputImageSelectionStrategy,
   VizModuleSettings,
 } from "@microblink/blinkid-react-native";
 import {
   SCANNING_MODES,
   SENSITIVITY_LEVELS,
+  INPUT_IMAGE_CROP_TYPES,
   ScanningModulesConfig,
+  INPUT_IMAGE_SELECTION_STRATEGIES
 } from "./ScanningModulesConfig";
 import { OptionalScanSettingsPanel } from "./OptionalScanSettingsPanel";
 import {
@@ -28,11 +32,6 @@ type Props = {
 };
 
 export function ModuleSettingsPanel({ config, onChanged }: Props) {
-  const updateBarcode = (update: (s: BarcodeModuleSettings) => void) => {
-    update(config.barcode);
-    onChanged();
-  };
-
   const updateDocumentCapture = (
     update: (s: DocumentCaptureModuleSettings) => void,
   ) => {
@@ -216,6 +215,11 @@ function BarcodeModuleCard({
         value={b.dataMatrixScanningEnabled}
         onChanged={(v) => update((s) => (s.dataMatrixScanningEnabled = v))}
       />
+      <BoolSettingTile
+        title="Aztec"
+        value={b.aztecScanningEnabled}
+        onChanged={(v) => update((s) => (s.aztecScanningEnabled = v))}
+      />
     </ModuleCard>
   );
 }
@@ -334,11 +338,15 @@ function DocumentCaptureModuleCard({
         onChanged={(v) => update((s) => (s.extensionFactor = v))}
       />
       <SectionLabel text="Direct API" />
-      <BoolSettingTile
-        title="Input image cropped"
-        subtitle="For pre-cropped Direct API images only"
-        value={d.inputImageCropped}
-        onChanged={(v) => update((s) => (s.inputImageCropped = v))}
+      <CropTypeDropdown
+        label="Input image crop type"
+        value={d.cropType}
+        onChanged={(v) => update((s) => (s.cropType = v))}
+      />
+      <ImageSelectionStrategyDropdown
+        label="Input image selection strategy"
+        value={d.inputImageSelectionStrategy}
+        onChanged={(v) => update((s) => (s.inputImageSelectionStrategy = v))}
       />
       <DoubleSettingField
         label="Input image margin"
@@ -443,6 +451,44 @@ function SensitivityDropdown({
       label={label}
       value={value}
       options={SENSITIVITY_LEVELS}
+      onChanged={onChanged}
+    />
+  );
+}
+
+function CropTypeDropdown({
+  label,
+  value,
+  onChanged,
+}: {
+  label: string;
+  value: InputImageCropType;
+  onChanged: (value: InputImageCropType) => void;
+}) {
+  return (
+    <EnumDropdown
+      label={label}
+      value={value}
+      options={INPUT_IMAGE_CROP_TYPES}
+      onChanged={onChanged}
+    />
+  );
+}
+
+function ImageSelectionStrategyDropdown({
+  label,
+  value,
+  onChanged,
+}: {
+  label: string;
+  value: InputImageSelectionStrategy;
+  onChanged: (value: InputImageSelectionStrategy) => void;
+}) {
+  return (
+    <EnumDropdown
+      label={label}
+      value={value}
+      options={INPUT_IMAGE_SELECTION_STRATEGIES}
       onChanged={onChanged}
     />
   );

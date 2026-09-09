@@ -4,11 +4,13 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import com.microblink.blinkid.core.BlinkIdSdkSettings
+import com.microblink.blinkid.core.settings.ResourcesConfig
+import com.microblink.blinkid.core.settings.OtaResourcesConfig
 import com.microblink.blinkid.core.result.FieldType
-import com.microblink.blinkid.core.result.classinfo.Country
+import com.microblink.blinkid.core.result.classinfo.CountryId
 import com.microblink.blinkid.core.result.classinfo.DocumentClassInfo
-import com.microblink.blinkid.core.result.classinfo.Region
-import com.microblink.blinkid.core.result.classinfo.Type
+import com.microblink.blinkid.core.result.classinfo.RegionId
+import com.microblink.blinkid.core.result.classinfo.DocumentTypeId
 import com.microblink.blinkid.core.session.BlinkIdSessionSettings
 import com.microblink.blinkid.core.session.ScanningMode
 import com.microblink.blinkid.core.settings.DocumentNumberRedactionSettings
@@ -16,6 +18,8 @@ import com.microblink.blinkid.core.settings.RedactionSettings
 import com.microblink.blinkid.core.settings.RedactionSettingsResolver
 import com.microblink.blinkid.core.settings.ScanningSettings
 import com.microblink.blinkid.core.settings.SensitivityLevel
+import com.microblink.blinkid.core.image.InputImageCropType
+import com.microblink.blinkid.core.image.InputImageSelectionStrategy
 import com.microblink.blinkid.core.settings.scanning.BarcodeModuleSettings
 import com.microblink.blinkid.core.settings.scanning.DocumentCaptureModuleSettings
 import com.microblink.blinkid.core.settings.scanning.MrzModuleSettings
@@ -27,6 +31,7 @@ import com.microblink.blinkid.core.session.InputImageSource
 import com.microblink.blinkid.core.settings.RedactionMode
 import com.microblink.blinkid.ux.camera.CameraLensFacing
 import com.microblink.blinkid.ux.camera.CameraSettings
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
@@ -36,26 +41,45 @@ import org.json.JSONObject
 object BlinkIdDeserializationUtilities {
 
   private const val DEFAULT_RESOURCE_DOWNLOAD_URL = "https://models.cdn.microblink.com/resources"
-  private const val DEFAULT_RESOURCES_LOCAL_FOLDER = "MLModels"
+  private const val DEFAULT_RESOURCES_LOCAL_FOLDER = "microblink/blinkid"
+
+  private const val DEFAULT_OTA_DOWNLOAD_URL = "https://blinkid-ota.microblink.com"
+  private const val DEFAULT_OTA_RESOURCES_LOCAL_FOLDER = "microblink/blinkid/ota"
 
   fun deserializeBlinkIdSdkSettings(blinkIdSdkSettingsMap: JSONObject?): BlinkIdSdkSettings? {
     val licenseKey = blinkIdSdkSettingsMap?.optString("licenseKey")?.takeIf { it.isNotBlank() }
       ?: return null
 
+    val resourcesMap = blinkIdSdkSettingsMap.optJSONObject("resourcesConfig")
+    val otaResourcesMap = blinkIdSdkSettingsMap.optJSONObject("otaResourcesConfig")
+
     return BlinkIdSdkSettings(
       licenseKey = licenseKey,
       licensee = blinkIdSdkSettingsMap.optString("licensee").takeIf { it.isNotBlank() },
-      downloadResources = blinkIdSdkSettingsMap.optBoolean("downloadResources", true),
-      resourceDownloadUrl = blinkIdSdkSettingsMap.optString(
-        "resourceDownloadUrl",
-        DEFAULT_RESOURCE_DOWNLOAD_URL
+      resourcesConfig = ResourcesConfig(
+        download = resourcesMap?.optBoolean("download", true) ?: true,
+        serviceUrl = resourcesMap?.optString("serviceUrl")
+          ?.takeIf { it.isNotBlank() }
+          ?: DEFAULT_RESOURCE_DOWNLOAD_URL,
+        localFolder = resourcesMap?.optString("localFolder")
+          ?.takeIf { it.isNotBlank() }
+          ?: DEFAULT_RESOURCES_LOCAL_FOLDER,
+        requestTimeout = deserializeResourceRequestTimeout(
+          resourcesMap?.opt("requestTimeout")
+        ),
       ),
-      resourceLocalFolder = blinkIdSdkSettingsMap.optString(
-        "resourceLocalFolder",
-        DEFAULT_RESOURCES_LOCAL_FOLDER
-      ),
-      resourceRequestTimeout = deserializeResourceRequestTimeout(
-        blinkIdSdkSettingsMap.opt("resourceRequestTimeout")
+      otaResourcesConfig = OtaResourcesConfig(
+        checkForUpdates = otaResourcesMap?.optBoolean("checkForUpdates", true) ?: true,
+        strict = otaResourcesMap?.optBoolean("strict", false) ?: false,
+        serviceUrl = otaResourcesMap?.optString("serviceUrl")
+          ?.takeIf { it.isNotBlank() }
+          ?: DEFAULT_OTA_DOWNLOAD_URL,
+        localFolder = otaResourcesMap?.optString("localFolder")
+          ?.takeIf { it.isNotBlank() }
+          ?: DEFAULT_OTA_RESOURCES_LOCAL_FOLDER,
+        requestTimeout = deserializeResourceRequestTimeout(
+          otaResourcesMap?.opt("requestTimeout")
+        ),
       ),
       microblinkProxyUrl = blinkIdSdkSettingsMap.optString("microblinkProxyURL")
         .takeIf { it.isNotBlank() },
@@ -219,7 +243,8 @@ object BlinkIdDeserializationUtilities {
     moduleMap: JSONObject
   ): DocumentCaptureModuleSettings {
     return DocumentCaptureModuleSettings(
-      inputImageCropped = moduleMap.optBoolean("inputImageCropped", false),
+      cropType = parseInputImageCropType(moduleMap.optString("cropType", "not-cropped")),
+      inputImageSelectionStrategy = parseInputImageSelectionStrategy(moduleMap.optString("inputImageSelectionStrategy", "balanced")),
       unsupportedDocumentsAllowed = moduleMap.optBoolean("unsupportedDocumentsAllowed", false),
       secondSideWithNoExtractableDataSkipped = moduleMap.optBoolean(
         "secondSideWithNoExtractableDataSkipped",
@@ -263,6 +288,7 @@ object BlinkIdDeserializationUtilities {
       ean13ScanningEnabled = moduleMap.optBoolean("ean13ScanningEnabled", false),
       itfScanningEnabled = moduleMap.optBoolean("itfScanningEnabled", false),
       dataMatrixScanningEnabled = moduleMap.optBoolean("dataMatrixScanningEnabled", false),
+      aztecScanningEnabled = moduleMap.optBoolean("aztecScanningEnabled", false),
     )
   }
 
@@ -298,23 +324,28 @@ object BlinkIdDeserializationUtilities {
   }
 
   private fun deserializeResourceRequestTimeout(timeoutValue: Any?): RequestTimeout {
-    return when (timeoutValue) {
-      is Number -> {
-        val timeout = timeoutValue.toInt().milliseconds
-        RequestTimeout(
-          connectionTimeout = timeout,
-          writeTimeout = timeout,
-          readTimeout = timeout,
-        )
-      }
-      is JSONObject -> RequestTimeout(
-        connectionTimeout = timeoutValue
-          .optInt("connectionTimeoutMilliseconds", 10_000)
-          .milliseconds,
-        writeTimeout = timeoutValue.optInt("writeTimeoutMilliseconds", 10_000).milliseconds,
-        readTimeout = timeoutValue.optInt("readTimeoutMilliseconds", 10_000).milliseconds,
-      )
-      else -> RequestTimeout.DEFAULT
+    val resourceRequestTimeoutMap = timeoutValue as? JSONObject ?: return RequestTimeout.DEFAULT
+    val defaultTimeout = RequestTimeout.DEFAULT
+    return RequestTimeout(
+      connectionTimeout = deserializeTimeoutMilliseconds(
+        resourceRequestTimeoutMap.opt("connectionTimeoutMilliseconds"),
+        defaultTimeout.connectionTimeout,
+      ),
+      writeTimeout = deserializeTimeoutMilliseconds(
+        resourceRequestTimeoutMap.opt("writeTimeoutMilliseconds"),
+        defaultTimeout.writeTimeout,
+      ),
+      readTimeout = deserializeTimeoutMilliseconds(
+        resourceRequestTimeoutMap.opt("readTimeoutMilliseconds"),
+        defaultTimeout.readTimeout,
+      ),
+    )
+  }
+
+  private fun deserializeTimeoutMilliseconds(value: Any?, default: Duration): Duration {
+    return when (value) {
+      is Number -> value.toInt().milliseconds
+      else -> default
     }
   }
 
@@ -322,6 +353,24 @@ object BlinkIdDeserializationUtilities {
     return when (value?.lowercase()) {
       "single" -> ScanningMode.Single
       else -> ScanningMode.Automatic
+    }
+  }
+
+  private fun parseInputImageCropType(value: String): InputImageCropType {
+    return when (value.lowercase()) {
+      "cropped" -> InputImageCropType.Cropped
+      "unknown" -> InputImageCropType.Unknown
+      else -> InputImageCropType.NotCropped
+    }
+  }
+
+  private fun parseInputImageSelectionStrategy(value: String): InputImageSelectionStrategy {
+    return when (value.lowercase()) {
+      "single-image" -> InputImageSelectionStrategy.SingleImage
+      "optimize-for-speed" -> InputImageSelectionStrategy.OptimizeForSpeed
+      "balanced" -> InputImageSelectionStrategy.Balanced
+      "optimize-for-quality" -> InputImageSelectionStrategy.OptimizeForQuality
+      else -> InputImageSelectionStrategy.Balanced
     }
   }
 
@@ -390,19 +439,19 @@ object BlinkIdDeserializationUtilities {
     val region = filteredClass.optString("region").takeIf { it.isNotBlank() }
     val documentType = filteredClass.optString("documentType").takeIf { it.isNotBlank() }
 
-    return (country == null || parseCountry(country) == classInfo.country) &&
-      (region == null || parseRegion(region) == classInfo.region) &&
-      (documentType == null || parseDocumentType(documentType) == classInfo.type)
+    return (country == null || parseCountryId(country) == classInfo.country?.id) &&
+      (region == null || parseRegionId(region) == classInfo.region?.id) &&
+      (documentType == null || parseDocumentTypeId(documentType) == classInfo.documentType?.id)
   }
 
-  private fun parseCountry(value: String): Country? =
-    Country.entries.find { it.name.equals(value, ignoreCase = true) }
+  private fun parseCountryId(value: String): CountryId? =
+    BlinkIdClassInfoIdMappings.parseCountryId(value)
 
-  private fun parseRegion(value: String): Region? =
-    Region.entries.find { it.name.equals(value, ignoreCase = true) }
+  private fun parseRegionId(value: String): RegionId? =
+    BlinkIdClassInfoIdMappings.parseRegionId(value)
 
-  private fun parseDocumentType(value: String): Type? =
-    Type.entries.find { it.name.equals(value, ignoreCase = true) }
+  private fun parseDocumentTypeId(value: String): DocumentTypeId? =
+    BlinkIdClassInfoIdMappings.parseDocumentTypeId(value)
 }
 
 @Parcelize

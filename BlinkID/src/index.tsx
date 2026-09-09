@@ -313,6 +313,19 @@ export async function performDirectApiScan(
   return parseNativeScanResult(jsonResult);
 }
 
+/**
+ * The `refreshLicenseLease` method refreshes the BlinkID SDK license lease.
+ *
+ * This method can be called periodically to maintain an active license status.
+ * The frequency of refresh calls depends on your license configuration.
+ *
+ * The BlinkID SDK must already be initialized (by calling {@link loadBlinkIdSdk}
+ * or any of the scanning methods) before calling this method.
+ */
+export async function refreshLicenseLease(): Promise<void> {
+  await BlinkidReactNative.refreshLicenseLease();
+}
+
 export type PerformDirectApiScanSettings = {
   sdkSettings: BlinkIdSdkSettings;
   sessionSettings: BlinkIdSessionSettings;

@@ -11,8 +11,9 @@ It offers powerful capabilities for capturing and analyzing a wide range of iden
 
 However, since the wrapper is open source, you can add the features you need on your own.
 
-> **Current version:** `@microblink/blinkid-react-native@8000.0.0` (BlinkID SDK v8000).  
-> If you are upgrading from v7.x, see [Migrating from v7.x](#migrating-from-v7x).
+> **Current version:** `@microblink/blinkid-react-native@8001.0.0` (BlinkID SDK v8001).  
+> If you are upgrading from v8000, see [What's new in v8001](#whats-new-in-v8001).  
+> If you are upgrading from v7.x, see [Migrating from v7.x](#migrating-from-v7x) (then apply the v8001 notes).
 
 # Table of contents
 - [Licensing](#licensing)
@@ -37,6 +38,7 @@ However, since the wrapper is open source, you can add the features you need on 
   - [SDK loading & unloading](#sdk-loading--unloading)
   - [BlinkID settings](#blinkid-settings)
   - [BlinkID results](#blinkid-results)
+- [What's new in v8001](#whats-new-in-v8001)
 - [What's new in v8000](#whats-new-in-v8000)
   - [Migrating from v7.x](#migrating-from-v7x)
 - [Additional information and Support](#additional-information-and-support)
@@ -49,7 +51,7 @@ A free trial license key can be requested after registering at the [Microblink D
 
 ## <a name="requirements"></a> Requirements
 
-BlinkID React Native v8000 was built and tested with [React Native v0.82.x](https://github.com/facebook/react-native/releases/tag/v0.82.1)
+BlinkID React Native v8001 was built and tested with [React Native v0.82.x](https://github.com/facebook/react-native/releases/tag/v0.82.1)
 - The BlinkID React Native SDK is also compatible with React Native applications running on the old architecture as it contains backward compatibility with Native Module implementation.
 
 For additional help with React-Native setup, view the official documentation [here](https://reactnative.dev/docs/set-up-your-environment).
@@ -159,7 +161,7 @@ npx @react-native-community/cli init YourAppName --package-name YourPackageName 
 
 2. Install the `@microblink/blinkid-react-native` dependency:
 ```bash
-npm install --save @microblink/blinkid-react-native@8000.0.0
+npm install --save @microblink/blinkid-react-native@8001.0.0
 ```
 
 3. Complete the platform-specific setup below.
@@ -245,9 +247,10 @@ import {
   performDirectApiScan,
   loadBlinkIdSdk,
   unloadBlinkIdSdk,
-  Country,
-  DocumentType,
-  Region,
+  refreshLicenseLease,
+  CountryID,
+  DocumentTypeID,
+  RegionID,
   type BlinkIdScanningResult,
   type BlinkIdSdkSettings,
   type BlinkIdSessionSettings,
@@ -263,6 +266,8 @@ const licenseKey = Platform.select({
 
 All settings are **plain objects**. You do not need class constructors.
 
+Use `CountryID` / `RegionID` / `DocumentTypeID` for class filters and redaction document filters. Nested `Country` / `Region` / `DocumentType` types (`{ id?, rawValue }`) appear only on **scan results** (`documentClassInfo`).
+
 ### <a name="configure-scanning-modules"></a> Configure scanning modules
 
 Scanning behavior is configured through `BlinkIdScanningSettings`, which contains up to four module settings. Include only the modules you want to use — omitting a module disables it.
@@ -271,6 +276,8 @@ Scanning behavior is configured through `BlinkIdScanningSettings`, which contain
 const scanningSettings: BlinkIdScanningSettings = {
   // Document capture: detection, image quality, cropped images
   documentCaptureModule: {
+    cropType: 'not-cropped', // camera UX must use not-cropped; see DirectAPI for cropped/unknown
+    inputImageSelectionStrategy: 'balanced', // camera / video only
     documentImageReturnEnabled: true,
     faceImageExtractionEnabled: true,
     dotsPerInch: 250,
@@ -286,10 +293,11 @@ const scanningSettings: BlinkIdScanningSettings = {
     presenceMandatory: false,
   },
 
-  // Barcode extraction (PDF417, QR, etc.)
+  // Barcode extraction (PDF417, QR, Aztec, etc.)
   barcodeModule: {
     pdf417ScanningEnabled: true,
     qrScanningEnabled: true,
+    aztecScanningEnabled: false,
     barcodeImageReturnEnabled: false,
   },
 
@@ -320,7 +328,7 @@ const sessionSettings: BlinkIdSessionSettings = {
 
 > **Note:** When using PDF417 and QR barcode scanning, enable both `pdf417ScanningEnabled` and `qrScanningEnabled` together. The analyzer treats them as a combined detection stage.
 
-For DirectAPI with pre-cropped document images, set `documentCaptureModule.inputImageCropped` to `true`.
+For DirectAPI with pre-cropped document images, set `documentCaptureModule.cropType` to `"cropped"` (or `"unknown"` if cropping is uncertain). Camera scanning (`performScan`) must keep `cropType: "not-cropped"`.
 
 Module configuration helpers can be found in [ScanningModulesConfig.ts](https://github.com/microblink/blinkid-react-native/blob/master/sample_files/ScanningModulesConfig.ts).
 
@@ -329,7 +337,8 @@ Module configuration helpers can be found in [ScanningModulesConfig.ts](https://
 ```typescript
 const sdkSettings: BlinkIdSdkSettings = {
   licenseKey,
-  downloadResources: true,
+  resourcesConfig: { download: true },
+  // otaResourcesConfig is optional — native defaults enable OTA update checks
 };
 
 const scanningUxSettings: BlinkIdScanningUxSettings = {
@@ -341,8 +350,8 @@ const scanningUxSettings: BlinkIdScanningUxSettings = {
 
 const classFilter = {
   includeDocuments: [
-    { country: Country.Croatia, documentType: DocumentType.Id },
-    { country: Country.USA, region: Region.Texas, documentType: DocumentType.Dl },
+    { country: CountryID.Croatia, documentType: DocumentTypeID.Id },
+    { country: CountryID.USA, region: RegionID.Texas, documentType: DocumentTypeID.Dl },
   ],
 };
 
@@ -356,6 +365,8 @@ try {
   });
 
   console.log(result.firstName?.value);
+  console.log(result.documentClassInfo?.country?.id);
+  console.log(result.documentClassInfo?.country?.rawValue);
   console.log(result.firstDocumentImage); // base64, if enabled
 } catch (error) {
   console.log(`Error during scan: ${error}`);
@@ -368,7 +379,7 @@ DirectAPI extracts data from Base64-encoded static images instead of using the c
 
 - Pass **two images** with `scanningMode: 'automatic'` (front side first, back side second).
 - Pass **one image** with `scanningMode: 'single'`.
-- Set `documentCaptureModule.inputImageCropped: true` when images are already cropped and perspective-corrected.
+- Set `documentCaptureModule.cropType` to `"cropped"` when images are already cropped and perspective-corrected, or `"unknown"` when cropping is uncertain. Use `"not-cropped"` for raw photos.
 
 ```typescript
 const firstImageBase64 = 'your-base64-image';
@@ -376,16 +387,23 @@ const secondImageBase64 = 'your-base64-image'; // optional for single-side
 
 try {
   const result = await performDirectApiScan({
-    sdkSettings: { licenseKey, downloadResources: true },
+    sdkSettings: {
+      licenseKey,
+      resourcesConfig: { download: true },
+    },
     sessionSettings: {
       scanningMode: 'automatic',
       scanningSettings: {
         documentCaptureModule: {
           documentImageReturnEnabled: true,
-          inputImageCropped: false,
+          cropType: 'not-cropped', // or 'cropped' / 'unknown' for DirectAPI
         },
         mrzModule: {},
-        barcodeModule: { pdf417ScanningEnabled: true, qrScanningEnabled: true },
+        barcodeModule: {
+          pdf417ScanningEnabled: true,
+          qrScanningEnabled: true,
+          aztecScanningEnabled: false,
+        },
         vizModule: {},
       },
     },
@@ -402,10 +420,10 @@ try {
 
 ### <a name="document-redaction"></a> Document redaction
 
-In v8000, anonymization has been renamed to **redaction**. For camera scanning, use a `RedactionSettingsResolver` to apply per-document redaction rules. For DirectAPI, pass a single `RedactionSettings` object.
+Anonymization was renamed to **redaction** in v8000. For camera scanning, use a `RedactionSettingsResolver` to apply per-document redaction rules. For DirectAPI, pass a single `RedactionSettings` object.
 
 ```typescript
-import { FieldType, type RedactionSettingsResolver } from '@microblink/blinkid-react-native';
+import { FieldType, CountryID, RegionID, DocumentTypeID, type RedactionSettingsResolver } from '@microblink/blinkid-react-native';
 
 const redactionSettingsResolver: RedactionSettingsResolver = {
   documentRedactionList: [
@@ -419,9 +437,9 @@ const redactionSettingsResolver: RedactionSettingsResolver = {
       redactMrzResult: false,
       redactBarcodeResult: false,
       documentFilter: {
-        country: Country.USA,
-        region: Region.California,
-        documentType: DocumentType.Id,
+        country: CountryID.USA,
+        region: RegionID.California,
+        documentType: DocumentTypeID.Id,
       },
     },
   ],
@@ -470,7 +488,7 @@ performScan({
 
 | Parameter | Description |
 | --- | --- |
-| `sdkSettings` | License key, resource download configuration |
+| `sdkSettings` | License key, `resourcesConfig`, optional `otaResourcesConfig`, proxy URL |
 | `sessionSettings` | Scanning mode, module settings, timeouts |
 | `scanningUxSettings` | Help button, onboarding dialog, haptic feedback, preferred camera |
 | `classFilter` | Include/exclude documents by country, region, and type |
@@ -502,7 +520,12 @@ Returns `BlinkIdScanningResult` ([implementation](https://github.com/microblink/
 Creates or retrieves the BlinkID SDK instance. Handles initialization, resource downloading, and license verification. Call in advance to reduce first-scan latency.
 
 ```typescript
-await loadBlinkIdSdk({ sdkSettings: { licenseKey, downloadResources: true } });
+await loadBlinkIdSdk({
+  sdkSettings: {
+    licenseKey,
+    resourcesConfig: { download: true },
+  },
+});
 ```
 
 If you do not call `loadBlinkIdSdk`, it is invoked automatically when a scan starts.
@@ -519,24 +542,41 @@ Set `deleteCachedResources` to `true` to also delete downloaded and cached SDK r
 
 `unloadBlinkIdSdk` is called automatically after each successful scan session.
 
+**The `refreshLicenseLease` method**
+
+Refreshes the SDK license lease. Can be called periodically to maintain an active license status; the required frequency depends on your license configuration. The SDK must already be initialized (via `loadBlinkIdSdk` or a scan) before calling this method.
+
+```typescript
+await refreshLicenseLease();
+```
+
 ### <a name="blinkid-settings"></a> BlinkID Settings
 
 | Setting | Type | Description |
 | --- | --- | --- |
-| SDK settings | `BlinkIdSdkSettings` | License key, resource download, proxy URL |
+| SDK settings | `BlinkIdSdkSettings` | License key, nested `resourcesConfig` / `otaResourcesConfig`, proxy URL |
 | Session settings | `BlinkIdSessionSettings` | Scanning mode, module settings, step/inactivity timeouts (ms; `0` disables) |
 | Scanning settings | `BlinkIdScanningSettings` | Module configuration (see below) |
 | UX settings | `BlinkIdScanningUxSettings` | UI customization during scanning |
-| Class filter | `ClassFilter` | Document include/exclude rules |
+| Class filter | `ClassFilter` | Document include/exclude rules (`CountryID` / `RegionID` / `DocumentTypeID`) |
 | Redaction | `RedactionSettings` / `RedactionSettingsResolver` | Field and image redaction |
+
+**SDK resource settings** (`BlinkIdSdkSettings`)
+
+| Field | Description |
+| --- | --- |
+| `resourcesConfig` | Base ML resource download/cache (`download`, `serviceUrl`, `localFolder`, `requestTimeout` as [`RequestTimeout`](BlinkID/src/blinkIdSettings.ts), iOS `bundleIdentifier`) |
+| `otaResourcesConfig` | OTA document resources (`checkForUpdates`, `strict`, `serviceUrl`, `localFolder`, …). Optional; native defaults apply when omitted |
+
+Do not cross-wire base and OTA hosts: base defaults to `https://models.cdn.microblink.com/resources`; OTA defaults to `https://blinkid-ota.microblink.com`.
 
 **Scanning module settings**
 
 | Module | Type | Key settings |
 | --- |  | --- |
-| Document capture | `DocumentCaptureModuleSettings` | Image quality (blur, glare, tilt, lighting), cropped/input image return, face extraction, passport data page only |
+| Document capture | `DocumentCaptureModuleSettings` | `cropType`, `inputImageSelectionStrategy`, image quality, image return, face extraction, passport data page only |
 | MRZ | `MrzModuleSettings` | `presenceMandatory` |
-| Barcode | `BarcodeModuleSettings` | PDF417, QR, retail barcode types, barcode image return |
+| Barcode | `BarcodeModuleSettings` | PDF417, QR, Aztec, retail barcode types, barcode image return |
 | VIZ | `VizModuleSettings` | Signature extraction, character validation, result aggregation |
 
 The [blinkIdSettings.ts](https://github.com/microblink/blinkid-react-native/blob/master/BlinkID/src/blinkIdSettings.ts) and [types.ts](https://github.com/microblink/blinkid-react-native/blob/master/BlinkID/src/types.ts) files contain all available settings with inline documentation.
@@ -547,20 +587,104 @@ The scanning result is stored in `BlinkIdScanningResult`. It contains extracted 
 
 Key result members:
 
-1. **Document class info** — `documentClassInfo` (`DocumentClassInfo`)
+1. **Document class info** — `documentClassInfo` (`DocumentClassInfo`) with nested `country` / `region` / `documentType` as `{ id?, rawValue }`
 2. **Data match information** — `dataMatchResult` (`DataMatchResult`)
 3. **Per-side results** — `subResults` (`SingleSideScanningResult[]`) — contains VIZ, MRZ, and barcode data per side
-4. **Aggregated fields** — top-level fields such as `firstName`, `lastName`, `documentNumber`, etc.
+4. **Aggregated fields** — top-level fields such as `firstName`, `lastName`, `documentNumber`, `ethnicity`, `parentsInfo`, etc.
 5. **Images** — `firstDocumentImage`, `secondDocumentImage`, `faceImage`, `signatureImage`, `firstInputImage`, `secondInputImage`, `barcodeImage`
 
 Each `SingleSideScanningResult` contains:
-- `viz` — Visual Inspection Zone data
+- `viz` — Visual Inspection Zone data (includes `ethnicity` when available)
 - `mrz` — Machine Readable Zone data
 - `barcode` — Barcode data
 - `documentImage`, `faceImage`, `signatureImage`, `inputImage`
 
 
 Full result types: [blinkIdResult.ts](https://github.com/microblink/blinkid-react-native/blob/master/BlinkID/src/blinkIdResult.ts) and [types.ts](https://github.com/microblink/blinkid-react-native/blob/master/BlinkID/src/types.ts).
+
+## <a name="whats-new-in-v8001"></a> What's new in v8001
+
+BlinkID v8001 builds on the modular architecture from v8000 with faster document support (including OTA resources), better frame selection, DirectAPI crop handling, Aztec barcodes, and nested document class info.
+
+Highlights for React Native:
+
+| Area | Change |
+| --- | --- |
+| **SDK settings** | Flat resource fields → nested `resourcesConfig`; new optional `otaResourcesConfig` |
+| **Document class info** | `country` / `region` / `documentType` are `{ id?, rawValue }` (filters still use flat `CountryID` / `RegionID` / `DocumentTypeID`) |
+| **Document capture** | `inputImageCropped` → `cropType`; added `inputImageSelectionStrategy` |
+| **Barcode** | `aztecScanningEnabled` |
+| **Results** | `ethnicity`; `ParentInfo.fullName`; `FieldType.Ethnicity` / `ParentFullName` |
+
+#### Migrating SDK settings from v8000
+
+```typescript
+// v8000
+const sdkSettings = { licenseKey, downloadResources: true };
+
+// v8001
+const sdkSettings: BlinkIdSdkSettings = {
+  licenseKey,
+  resourcesConfig: { download: true },
+  otaResourcesConfig: {
+    checkForUpdates: true, // default
+    strict: false,         // default — set true to fail init on OTA download errors
+  },
+};
+```
+
+| v8000 (flat) | v8001 |
+| --- | --- |
+| `downloadResources` | `resourcesConfig.download` |
+| `resourceDownloadUrl` | `resourcesConfig.serviceUrl` |
+| `resourceLocalFolder` | `resourcesConfig.localFolder` |
+| `resourceRequestTimeout` | `resourcesConfig.requestTimeout` ([`RequestTimeout`](BlinkID/src/blinkIdSettings.ts), milliseconds) |
+| `bundleIdentifier` | `resourcesConfig.bundleIdentifier` (iOS) |
+
+Do **not** cross-wire hosts: base resources use `https://models.cdn.microblink.com/resources`; OTA uses `https://blinkid-ota.microblink.com`.
+
+#### Resource download timeouts
+
+`resourcesConfig.requestTimeout` and `otaResourcesConfig.requestTimeout` accept a [`RequestTimeout`](BlinkID/src/blinkIdSettings.ts) object (milliseconds). Omit `requestTimeout` to use native defaults (30 seconds per timeout on current BlinkID native SDKs). Omit individual fields inside `requestTimeout` to keep the native default for that timeout.
+
+```typescript
+resourcesConfig: {
+  download: true,
+  requestTimeout: {
+    connectionTimeoutMilliseconds: 30000,
+    writeTimeoutMilliseconds: 30000,
+    readTimeoutMilliseconds: 30000,
+  },
+},
+
+otaResourcesConfig: {
+  requestTimeout: {
+    connectionTimeoutMilliseconds: 30000,
+    readTimeoutMilliseconds: 60000,
+  }, // write timeout uses native default when omitted
+},
+```
+
+#### Migrating document capture settings
+
+```typescript
+// v8000
+documentCaptureModule: { inputImageCropped: true }
+
+// v8001 — DirectAPI only for cropped/unknown
+documentCaptureModule: { cropType: 'cropped' } // or 'unknown' | 'not-cropped'
+```
+
+Camera UX (`performScan`) must use `cropType: 'not-cropped'`.
+
+#### Document class info in results
+
+```typescript
+const countryId = result.documentClassInfo?.country?.id;       // CountryID when known
+const countryRaw = result.documentClassInfo?.country?.rawValue; // always set when country present
+```
+
+Full changelog (documents, bug fixes, API details): [Release notes.md](https://github.com/microblink/blinkid-react-native/blob/master/Release%20notes.md) and [platform release notes](https://docs.microblink.com/blinkid/release-notes).
 
 ## <a name="whats-new-in-v8000"></a> What's new in v8000
 
@@ -593,30 +717,36 @@ If you are upgrading from `@microblink/blinkid-react-native@7.x` (e.g. 7.7.0), t
 const sdkSettings = new BlinkIdSdkSettings(licenseKey);
 sdkSettings.downloadResources = true;
 
-// v8000
+// v8000 (flat resource fields)
 const sdkSettings = { licenseKey, downloadResources: true };
+
+// v8001 (nested resources — preferred)
+const sdkSettings = {
+  licenseKey,
+  resourcesConfig: { download: true },
+};
 ```
 
 #### Modular scanning settings
 
-Flat v7 settings map to module settings in v8000:
+Flat v7 settings map to module settings in v8000 (still valid in v8001; use `cropType` instead of `inputImageCropped`):
 
-| v7                                                | v8000                                                 |
-|---------------------------------------------------|-------------------------------------------------------|
-| `blurDetectionLevel`                              | `documentCaptureModule.blurSensitivityLevel`          |
-| `glareDetectionLevel`                             | `documentCaptureModule.glareSensitivityLevel`         |
-| `tiltDetectionLevel`                              | `documentCaptureModule.tiltSensitivityLevel`          |
-| `skipImagesWithBlur`                              | `documentCaptureModule.imageWithBlurRejected`         |
-| `skipImagesWithGlare`                             | `documentCaptureModule.imageWithGlareRejected`        |
-| `croppedImageSettings.returnDocumentImage`        | `documentCaptureModule.documentImageReturnEnabled`    |
-| `croppedImageSettings.returnFaceImage`            | `documentCaptureModule.faceImageExtractionEnabled`    |
-| `croppedImageSettings.returnSignatureImage`       | `vizModule.signatureImageExtractionEnabled`           |
-| `croppedImageSettings.dotsPerInch`                | `documentCaptureModule.dotsPerInch`                   |
-| `scanCroppedDocumentImage`                        | `documentCaptureModule.inputImageCropped`             |
-| `enableCharacterValidation`                       | `vizModule.characterValidationEnabled`                |
-| `scanPassportDataPageOnly`                        | `documentCaptureModule.passportDataPageScanOnly`      |
-| `anonymizationMode`                               | Use `RedactionSettings` / `RedactionSettingsResolver` |
-| `recognitionModeFilter` / `enableBarcodeScanOnly` | Enable/disable modules explicitly                     |
+| v7                                                | v8000 / v8001                                          |
+|---------------------------------------------------|--------------------------------------------------------|
+| `blurDetectionLevel`                              | `documentCaptureModule.blurSensitivityLevel`           |
+| `glareDetectionLevel`                             | `documentCaptureModule.glareSensitivityLevel`          |
+| `tiltDetectionLevel`                              | `documentCaptureModule.tiltSensitivityLevel`           |
+| `skipImagesWithBlur`                              | `documentCaptureModule.imageWithBlurRejected`          |
+| `skipImagesWithGlare`                             | `documentCaptureModule.imageWithGlareRejected`         |
+| `croppedImageSettings.returnDocumentImage`        | `documentCaptureModule.documentImageReturnEnabled`     |
+| `croppedImageSettings.returnFaceImage`            | `documentCaptureModule.faceImageExtractionEnabled`     |
+| `croppedImageSettings.returnSignatureImage`       | `vizModule.signatureImageExtractionEnabled`            |
+| `croppedImageSettings.dotsPerInch`                | `documentCaptureModule.dotsPerInch`                    |
+| `scanCroppedDocumentImage`                        | `documentCaptureModule.cropType` (`"cropped"` / `"not-cropped"` / `"unknown"`) |
+| `enableCharacterValidation`                       | `vizModule.characterValidationEnabled`                 |
+| `scanPassportDataPageOnly`                        | `documentCaptureModule.passportDataPageScanOnly`       |
+| `anonymizationMode`                               | Use `RedactionSettings` / `RedactionSettingsResolver`  |
+| `recognitionModeFilter` / `enableBarcodeScanOnly` | Enable/disable modules explicitly                      |
 
 Removed types: `CroppedImageSettings`, `AnonymizationMode`, `DetectionLevel`, `RecognitionMode`.
 
@@ -626,18 +756,20 @@ Removed types: `CroppedImageSettings`, `AnonymizationMode`, `DetectionLevel`, `R
 // v7 — positional arguments
 await performScan(sdkSettings, sessionSettings, uxSettings, classFilter);
 
-// v8000 — recommended object style
+// v8000 / v8001 — recommended object style
 await performScan({ sdkSettings, sessionSettings, scanningUxSettings: uxSettings, classFilter });
 ```
 
 ```typescript
-// v8000 unload API
+// unload API
 await unloadBlinkIdSdk({ deleteCachedResources: false });
 ```
 
-BlinkID Android SDK v8000 requires Kotlin v2.2.21+. See [Android setup](#android-setup) for more details.
+BlinkID Android SDK requires Kotlin v2.2.21+. See [Android setup](#android-setup) for more details.
 
-For the complete migration guide with all setting mappings, see [Migrate to v8000](https://docs.microblink.com/blinkid/migration-v8000).
+After migrating from v7 to the modular API, also apply [What's new in v8001](#whats-new-in-v8001) (nested `resourcesConfig` / OTA, `cropType`, nested class info).
+
+For the complete native migration guide from v7, see [Migrate to v8000](https://docs.microblink.com/blinkid/migration-v8000).
 
 ## <a name="additional-information-and-support"></a> Additional information and Support
 For any additional questions and information, feel free to contact us [here](https://help.microblink.com), or directly to the Support team at support@microblink.com.

@@ -155,6 +155,28 @@ import BlinkIDUX
             }
         }
     }
+
+    @objc public func refreshLicenseLease(onResolve: @escaping (String) -> Void, onReject: @escaping (String) -> Void) {
+        Task {
+            do {
+                guard blinkIdSdk != nil else {
+                    throw BlinkIdReactNativeError.initError(
+                        "The BlinkID SDK is not initialized. Call the loadBlinkIdSdk() method to pre-load the SDK first, or perform a scan."
+                    )
+                }
+                try await BlinkIDSdk.refreshLicenseLease()
+                onResolve("")
+            } catch let blinkIdError as BlinkIdReactNativeError {
+                onReject(BlinkIdReactNativeError.message(for: blinkIdError))
+            } catch {
+                if let sdkError = error as? InvalidLicenseKeyError {
+                    onReject(sdkError.message)
+                } else {
+                    onReject(BlinkIdReactNativeError.message(for: error))
+                }
+            }
+        }
+    }
     
     private func presentScanningUI(_ model: BlinkIDUXModel, _ rootVc: UIViewController) {
         DispatchQueue.main.async {

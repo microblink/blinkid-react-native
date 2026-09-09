@@ -1,43 +1,40 @@
 import {
-  Country,
-  DocumentType,
+  CountryID,
+  DocumentTypeID,
   FieldType,
-  Region,
-  type Country as CountryType,
+  RegionID,
   type DocumentFilter,
-  type DocumentType as DocumentTypeValue,
   type FieldType as FieldTypeValue,
   type RedactionMode,
-  type Region as RegionType,
 } from "@microblink/blinkid-react-native";
 
 export type UiDocumentFilter = {
-  country?: CountryType;
-  region?: RegionType;
-  documentType?: DocumentTypeValue;
+  country?: CountryID;
+  region?: RegionID;
+  documentType?: DocumentTypeID;
 };
 
-export const SAMPLE_COUNTRIES: CountryType[] = [
-  Country.Canada,
-  Country.USA,
-  Country.Croatia,
-  Country.Germany,
-  Country.UK,
-  Country.Australia,
+export const SAMPLE_COUNTRIES: CountryID[] = [
+  CountryID.Canada,
+  CountryID.USA,
+  CountryID.Croatia,
+  CountryID.Germany,
+  CountryID.UK,
+  CountryID.Australia,
 ];
 
-export const SAMPLE_USA_REGIONS: RegionType[] = [
-  Region.California,
-  Region.Texas,
-  Region.NewYork,
-  Region.Florida,
+export const SAMPLE_USA_REGIONS: RegionID[] = [
+  RegionID.California,
+  RegionID.Texas,
+  RegionID.NewYork,
+  RegionID.Florida,
 ];
 
-export const SAMPLE_DOCUMENT_TYPES: DocumentTypeValue[] = [
-  DocumentType.Id,
-  DocumentType.Dl,
-  DocumentType.Passport,
-  DocumentType.Visa,
+export const SAMPLE_DOCUMENT_TYPES: DocumentTypeID[] = [
+  DocumentTypeID.Id,
+  DocumentTypeID.Dl,
+  DocumentTypeID.Passport,
+  DocumentTypeID.Visa,
 ];
 
 export const REDACTION_MODES: RedactionMode[] = [

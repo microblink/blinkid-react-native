@@ -58,6 +58,13 @@ RCT_EXPORT_METHOD(performDirectApiScan:(nonnull NSString *)blinkIdSdkSettings bl
     }];
 }
 
+RCT_EXPORT_METHOD(refreshLicenseLease:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
+    [self->moduleImplementation refreshLicenseLeaseOnResolve:^(NSString * _Nonnull) {
+        resolve(@"");
+    } onReject:^(NSString * _Nonnull error) {
+        reject(@"BlinkIdIosError", error, nil);
+    }];
+}
 
 RCT_EXPORT_METHOD(performScan:(NSString *)blinkIdSdkSettings blinkIdSessionSettings:(NSString *)blinkIdSessionSettings blinkIdScanningUxSettings:(NSString *)blinkIdScanningUxSettings classFilter:(NSString *)classFilter redactionSettingsResolver:(NSString *)redactionSettingsResolver resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
     dispatch_async(dispatch_get_main_queue(), ^{

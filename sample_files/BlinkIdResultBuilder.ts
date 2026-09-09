@@ -9,6 +9,7 @@ import {
   DocumentClassInfo,
   DriverLicenseDetailedInfo,
   MrzResult,
+  ParentInfo,
   SingleSideScanningResult,
   StringResult,
   VizResult,
@@ -55,6 +56,7 @@ export class BlinkIdResultBuilder {
       this.buildResult("Personal Id Number", result.personalIdNumber) +
       this.buildResult("Profession", result.profession) +
       this.buildResult("Race", result.race) +
+      this.buildResult("Ethnicity", result.ethnicity) +
       this.buildResult("Religion", result.religion) +
       this.buildResult("Residential Status", result.residentialStatus) +
       this.buildResult("Country code", result.countryCode) +
@@ -63,6 +65,7 @@ export class BlinkIdResultBuilder {
         "National insurace number",
         result.nationalInsuranceNumber,
       ) +
+      this.buildParentsInfoResult(result.parentsInfo) +
       this.buildDriverLicenceResult(result.driverLicenseDetailedInfo) +
       this.buildDataMatchResult(result.dataMatchResult) +
       this.buildDocumentClassInfoResult(result.documentClassInfo) +
@@ -213,9 +216,11 @@ export class BlinkIdResultBuilder {
       this.buildResult("Manufacturing year", result.manufacturingYear) +
       this.buildResult("Mother's name", result.mothersName) +
       this.buildResult("Father's name", result.fathersName) +
+      this.buildParentsInfoResult(result.parentsInfo) +
       this.buildResult("Personal ID number", result.personalIdNumber) +
       this.buildResult("Profession", result.profession) +
       this.buildResult("Race", result.race) +
+      this.buildResult("Ethnicity", result.ethnicity) +
       this.buildResult("Religion", result.religion) +
       this.buildResult("Remarks", result.remarks) +
       this.buildResult("Residence permit type", result.residencePermitType) +
@@ -275,7 +280,11 @@ export class BlinkIdResultBuilder {
   static buildDocumentClassInfoResult(result?: DocumentClassInfo) {
     if (result == null || result == undefined) return "";
 
-    return `\nDocument class information\nCountry: ${result.country}\nRegion: ${result.region}\nDocument type: ${result.documentType}\nISO numeric country code: ${result.isoNumericCountryCode}\n`;
+    return `\nDocument class information
+      Country: ${result.country?.id ?? result.country?.rawValue}
+      Region: ${result.region?.id ?? result.region?.rawValue}
+      Document type: ${result.documentType?.id ?? result.documentType?.rawValue}
+      ISO numeric country code: ${result.isoNumericCountryCode}\n`;
   }
 
   static buildDateResult<T>(
@@ -367,6 +376,20 @@ export class BlinkIdResultBuilder {
       }
     }
     return dataMatchResultString;
+  }
+
+  static buildParentsInfoResult(parentsInfoResult?: ParentInfo[]): string {
+    if (parentsInfoResult == null || parentsInfoResult == undefined) return "";
+
+    let resultString = "";
+    for (const parentInfo of parentsInfoResult) {
+      resultString +=
+        this.buildResult("First name", parentInfo.firstName) +
+        this.buildResult("Last name", parentInfo.lastName) +
+        this.buildResult("Full name", parentInfo.fullName);
+    }
+
+    return resultString == "" ? "" : `Parents info:\n${resultString}`;
   }
 
   static buildDependentsInfoResult(

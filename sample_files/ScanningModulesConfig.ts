@@ -1,19 +1,22 @@
 import {
-  Country,
-  DocumentType,
+  CountryID,
+  DocumentTypeID,
   FieldType,
-  Region,
+  RegionID,
   type BarcodeModuleSettings,
   type BlinkIdScanningUxSettings,
   type BlinkIdSessionSettings,
   type BlinkIdScanningSettings,
   type ClassFilter,
+  type OtaResourcesConfig,
   type DocumentCaptureModuleSettings,
   type MrzModuleSettings,
   type RedactionSettings,
   type RedactionSettingsResolver,
   type ScanningMode,
   type SensitivityLevel,
+  type InputImageSelectionStrategy,
+  type InputImageCropType,
   type VizModuleSettings,
 } from "@microblink/blinkid-react-native";
 import {
@@ -21,6 +24,9 @@ import {
   uiToDocumentFilter,
   type UiDocumentFilter,
 } from "./SampleFilterOptions";
+
+/** Default OTA service URL used by the native BlinkID SDK when omitted. */
+export const DEFAULT_OTA_SERVICE_URL = "https://blinkid-ota.microblink.com";
 
 /** UI-driven scanning configuration for the BlinkID sample app. */
 export class ScanningModulesConfig {
@@ -58,6 +64,10 @@ export class ScanningModulesConfig {
   directApiRedaction: RedactionSettings =
     ScanningModulesConfig.defaultRedactionSettings();
 
+  otaResourcesDownload = true;
+  otaResourcesStrict = false;
+  otaResourcesServiceUrl = DEFAULT_OTA_SERVICE_URL;
+
   static defaultBarcodeModule(): BarcodeModuleSettings {
     return {
       presenceMandatory: false,
@@ -72,12 +82,14 @@ export class ScanningModulesConfig {
       ean13ScanningEnabled: false,
       itfScanningEnabled: false,
       dataMatrixScanningEnabled: false,
+      aztecScanningEnabled: false,
     };
   }
 
   static defaultDocumentCaptureModule(): DocumentCaptureModuleSettings {
     return {
-      inputImageCropped: false,
+      cropType: "not-cropped",
+      inputImageSelectionStrategy: "balanced",
       unsupportedDocumentsAllowed: false,
       secondSideWithNoExtractableDataSkipped: true,
       passportDataPageScanOnly: true,
@@ -122,9 +134,9 @@ export class ScanningModulesConfig {
       redactMrzResult: false,
       redactBarcodeResult: false,
       documentFilter: {
-        country: Country.USA,
-        region: Region.California,
-        documentType: DocumentType.Id,
+        country: CountryID.USA,
+        region: RegionID.California,
+        documentType: DocumentTypeID.Id,
       },
     };
   }
@@ -167,6 +179,20 @@ export class ScanningModulesConfig {
       return undefined;
     }
     return this.directApiRedaction;
+  }
+
+  toOtaResourcesConfig(): OtaResourcesConfig {
+    if (!this.otaResourcesDownload) {
+      return { checkForUpdates: false };
+    }
+
+    const serviceUrl = this.otaResourcesServiceUrl.trim();
+
+    return {
+      checkForUpdates: true,
+      strict: this.otaResourcesStrict,
+      ...(serviceUrl.length > 0 ? { serviceUrl } : {}),
+    };
   }
 
   toScanningSettings(): BlinkIdScanningSettings {
@@ -222,6 +248,9 @@ export class ScanningModulesConfig {
     ];
     this.directApiRedactionEnabled = false;
     this.directApiRedaction = ScanningModulesConfig.defaultRedactionSettings();
+    this.otaResourcesDownload = true;
+    this.otaResourcesStrict = false;
+    this.otaResourcesServiceUrl = DEFAULT_OTA_SERVICE_URL;
   }
 }
 
@@ -232,4 +261,17 @@ export const SENSITIVITY_LEVELS: SensitivityLevel[] = [
   "low",
   "mid",
   "high",
+];
+
+export const INPUT_IMAGE_CROP_TYPES: InputImageCropType[] = [
+  "not-cropped",
+  "unknown",
+  "cropped",
+];
+
+export const INPUT_IMAGE_SELECTION_STRATEGIES: InputImageSelectionStrategy[] = [
+  "single-image",
+  "optimize-for-speed",
+  "balanced",
+  "optimize-for-quality"
 ];
