@@ -11,9 +11,10 @@ It offers powerful capabilities for capturing and analyzing a wide range of iden
 
 However, since the wrapper is open source, you can add the features you need on your own.
 
-> **Current version:** `@microblink/blinkid-react-native@8001.0.0` (BlinkID SDK v8001).  
-> If you are upgrading from v8000, see [What's new in v8001](#whats-new-in-v8001).  
-> If you are upgrading from v7.x, see [Migrating from v7.x](#migrating-from-v7x) (then apply the v8001 notes).
+> **Current version:** `@microblink/blinkid-react-native@8002.0.0` (BlinkID native SDK v8002).  
+> If you are upgrading from v8001, see [What's new in v8002](#whats-new-in-v8002).  
+> If you are upgrading from v8000, see [What's new in v8001](#whats-new-in-v8001), then the v8002 notes.  
+> If you are upgrading from v7.x, see [Migrating from v7.x](#migrating-from-v7x) (then apply the v8001 and v8002 notes).
 
 # Table of contents
 - [Licensing](#licensing)
@@ -38,6 +39,7 @@ However, since the wrapper is open source, you can add the features you need on 
   - [SDK loading & unloading](#sdk-loading--unloading)
   - [BlinkID settings](#blinkid-settings)
   - [BlinkID results](#blinkid-results)
+- [What's new in v8002](#whats-new-in-v8002)
 - [What's new in v8001](#whats-new-in-v8001)
 - [What's new in v8000](#whats-new-in-v8000)
   - [Migrating from v7.x](#migrating-from-v7x)
@@ -51,7 +53,7 @@ A free trial license key can be requested after registering at the [Microblink D
 
 ## <a name="requirements"></a> Requirements
 
-BlinkID React Native v8001 was built and tested with [React Native v0.82.x](https://github.com/facebook/react-native/releases/tag/v0.82.1)
+BlinkID React Native v8002 was built and tested with [React Native v0.82.x](https://github.com/facebook/react-native/releases/tag/v0.82.1)
 - The BlinkID React Native SDK is also compatible with React Native applications running on the old architecture as it contains backward compatibility with Native Module implementation.
 
 For additional help with React-Native setup, view the official documentation [here](https://reactnative.dev/docs/set-up-your-environment).
@@ -59,8 +61,8 @@ For additional help with React-Native setup, view the official documentation [he
 **Device requirements**
 
 The BlinkID React Native plugin requires:
-- iOS version 16.0 and above
-- Android API version 24 and above
+- iOS version 16.0 and above (build with **Xcode 16.3** or newer — Swift 6.1 toolchain)
+- Android API version 24 and above (**compileSdkVersion 37** or newer; see [Android setup](#android-setup))
 
 For more detailed information about the BlinkID Android and iOS requirements, view the native SDK documentation here ([Android](https://github.com/microblink/blinkid-android?tab=readme-ov-file#-device-requirements) & [iOS](https://github.com/microblink/blinkid-ios?tab=readme-ov-file#requirements)).
 
@@ -161,7 +163,7 @@ npx @react-native-community/cli init YourAppName --package-name YourPackageName 
 
 2. Install the `@microblink/blinkid-react-native` dependency:
 ```bash
-npm install --save @microblink/blinkid-react-native@8001.0.0
+npm install --save @microblink/blinkid-react-native@8002.0.0
 ```
 
 3. Complete the platform-specific setup below.
@@ -181,7 +183,7 @@ dependencyResolutionManagement {
 }
 ```
 
-Ensure your app uses **Kotlin v2.2.21** or newer, **minSdkVersion 24** or newer, and **compileSdkVersion 36** or newer. Use the Android Gradle Plugin and Gradle versions shipped with your React Native release (for example, React Native 0.82.x uses AGP 8.12 and Gradle 9.0).
+Ensure your app uses **Kotlin v2.2.21** or newer, **minSdkVersion 24** or newer, and **compileSdkVersion 37** or newer (with **targetSdkVersion 37** recommended). Use the Android Gradle Plugin and Gradle versions shipped with your React Native release (for example, React Native 0.82.x uses AGP 8.12 and Gradle 9.0).
 
 `blinkid-ux` ships its Compose-based scanning UI as a precompiled AAR, so client apps do not need to enable the Compose compiler plugin, `buildFeatures.compose`, or a Compose BOM unless they compile their own Compose code.
 
@@ -208,6 +210,8 @@ platform :ios, '16.0'
 ```bash
 cd ios && pod install
 ```
+
+3. Build with **Xcode 16.3** or newer (Swift **6.1**). Older Xcode versions are not supported with BlinkID native SDK v8002.
 
 The plugin ships with vendored `BlinkID.xcframework` and `BlinkIDUX.xcframework` frameworks.
 
@@ -271,6 +275,8 @@ Use `CountryID` / `RegionID` / `DocumentTypeID` for class filters and redaction 
 ### <a name="configure-scanning-modules"></a> Configure scanning modules
 
 Scanning behavior is configured through `BlinkIdScanningSettings`, which contains up to four module settings. Include only the modules you want to use — omitting a module disables it.
+
+Alternatively, set `sessionPreset` on `BlinkIdSessionSettings` (`documentVideo`, `documentPhoto`, `standaloneBarcode`, or `verifyCapture`) and optionally merge overrides via `scanningSettings`. See [What's new in v8002](#whats-new-in-v8002).
 
 ```typescript
 const scanningSettings: BlinkIdScanningSettings = {
@@ -346,6 +352,7 @@ const scanningUxSettings: BlinkIdScanningUxSettings = {
   showOnboardingDialog: true,
   allowHapticFeedback: true,
   preferredCamera: 'back',
+  passportOnly: false, // true for passport-booklet-only UX
 };
 
 const classFilter = {
@@ -555,9 +562,9 @@ await refreshLicenseLease();
 | Setting | Type | Description |
 | --- | --- | --- |
 | SDK settings | `BlinkIdSdkSettings` | License key, nested `resourcesConfig` / `otaResourcesConfig`, proxy URL |
-| Session settings | `BlinkIdSessionSettings` | Scanning mode, module settings, step/inactivity timeouts (ms; `0` disables) |
+| Session settings | `BlinkIdSessionSettings` | Optional `sessionPreset` + use-case objects, scanning mode, module settings, step/inactivity timeouts (ms; `0` disables) |
 | Scanning settings | `BlinkIdScanningSettings` | Module configuration (see below) |
-| UX settings | `BlinkIdScanningUxSettings` | UI customization during scanning |
+| UX settings | `BlinkIdScanningUxSettings` | UI customization (`passportOnly`, help tooltip delays, camera, sounds, haptics) |
 | Class filter | `ClassFilter` | Document include/exclude rules (`CountryID` / `RegionID` / `DocumentTypeID`) |
 | Redaction | `RedactionSettings` / `RedactionSettingsResolver` | Field and image redaction |
 
@@ -601,6 +608,47 @@ Each `SingleSideScanningResult` contains:
 
 
 Full result types: [blinkIdResult.ts](https://github.com/microblink/blinkid-react-native/blob/master/BlinkID/src/blinkIdResult.ts) and [types.ts](https://github.com/microblink/blinkid-react-native/blob/master/BlinkID/src/types.ts).
+
+## <a name="whats-new-in-v8002"></a> What's new in v8002
+
+BlinkID v8002 adds **session presets** for common integration paths, passport-only UX, expanded classification enums and result fields, and raises Android **compileSdk/targetSdk** to **37** and iOS toolchain requirements to **Xcode 16.3+** (Swift 6.1).
+
+Highlights for React Native:
+
+| Area | Change |
+| --- | --- |
+| **Session settings** | `sessionPreset` + `documentVideoUseCase` / `documentPhotoUseCase`; `scanningSettings` merges onto the preset |
+| **UX** | `passportOnly`; `helpTooltipShowDelay` / `helpTooltipHideDelay`; `allowScanSound` |
+| **Country ID (breaking)** | `VirginIslandsBritish` → `BritishVirginIslands` (`britishVirginIslands`) |
+| **Classification** | New document types (`specifiedResidenceCard`, `goldenCard`, `vehicleOwnershipCertificate`, `byIdCard`); `RegionID.NorthernIreland` |
+| **Results** | `vehicleNumber`, `passportNumber`, `trafficParticipantNumber`; matching `FieldType` values for redaction |
+| **Requirements** | Android **compileSdk 37**; iOS **Xcode 16.3+** |
+
+#### Session presets
+
+```typescript
+const sessionSettings: BlinkIdSessionSettings = {
+  sessionPreset: 'documentVideo',
+  documentVideoUseCase: {
+    scenario: 'general', // or 'mrzMandatory' | 'mrzOnly' | 'barcodeOnly'
+    quality: 'balanced', // or 'highSpeed' | 'highAccuracy' | 'permissive'
+    captureEnvironment: 'handHeld', // or 'stationary'
+  },
+  scanningSettings: {
+    documentCaptureModule: { documentImageReturnEnabled: true },
+  },
+};
+```
+
+Presets: `documentVideo` (camera), `documentPhoto` (single image / gallery), `standaloneBarcode`, `verifyCapture`. Omit `scanningSettings` or pass `{}` to use the preset alone. Omit `scanningMode` to keep the preset default; set `'single'` or `'automatic'` only when you need to override. Manual module tuning without `sessionPreset` still works as in v8001.
+
+#### Migrating from v8001
+
+- Replace `CountryID.VirginIslandsBritish` with `CountryID.BritishVirginIslands` in class filters and redaction rules.
+- Raise Android `compileSdkVersion` and `targetSdkVersion` to **37** in your app `build.gradle` (the sample init script does this automatically).
+- Upgrade to **Xcode 16.3+** for iOS builds.
+
+Full changelog (documents, native fixes, API details): [Release notes.md](https://github.com/microblink/blinkid-react-native/blob/master/Release%20notes.md) and [platform release notes](https://docs.microblink.com/blinkid/release-notes).
 
 ## <a name="whats-new-in-v8001"></a> What's new in v8001
 
@@ -767,7 +815,7 @@ await unloadBlinkIdSdk({ deleteCachedResources: false });
 
 BlinkID Android SDK requires Kotlin v2.2.21+. See [Android setup](#android-setup) for more details.
 
-After migrating from v7 to the modular API, also apply [What's new in v8001](#whats-new-in-v8001) (nested `resourcesConfig` / OTA, `cropType`, nested class info).
+After migrating from v7 to the modular API, also apply [What's new in v8001](#whats-new-in-v8001) (nested `resourcesConfig` / OTA, `cropType`, nested class info), then [What's new in v8002](#whats-new-in-v8002) if you upgrade to the latest release.
 
 For the complete native migration guide from v7, see [Migrate to v8000](https://docs.microblink.com/blinkid/migration-v8000).
 

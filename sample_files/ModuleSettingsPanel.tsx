@@ -9,12 +9,18 @@ import type {
   VizModuleSettings,
 } from "@microblink/blinkid-react-native";
 import {
+  DOCUMENT_SCENARIOS,
+  PHOTO_QUALITY_PROFILES,
   SCANNING_MODES,
+  SESSION_PRESET_MODES,
   SENSITIVITY_LEVELS,
   INPUT_IMAGE_CROP_TYPES,
   ScanningModulesConfig,
-  INPUT_IMAGE_SELECTION_STRATEGIES
+  INPUT_IMAGE_SELECTION_STRATEGIES,
+  VIDEO_CAPTURE_ENVIRONMENTS,
+  VIDEO_QUALITY_PROFILES,
 } from "./ScanningModulesConfig";
+import { SessionPreset } from "@microblink/blinkid-react-native";
 import { OptionalScanSettingsPanel } from "./OptionalScanSettingsPanel";
 import {
   BoolSettingTile,
@@ -44,13 +50,84 @@ export function ModuleSettingsPanel({ config, onChanged }: Props) {
     onChanged();
   };
 
+  const presetIsVideo =
+    config.sessionPresetMode === SessionPreset.DocumentVideo;
+  const presetIsPhoto =
+    config.sessionPresetMode === SessionPreset.DocumentPhoto;
+  const presetUseCase =
+    presetIsVideo || presetIsPhoto;
+
   return (
     <View style={styles.panel}>
       <Text style={styles.title}>Scanning modules</Text>
       <Text style={styles.hint}>
-        Disabled modules are sent as null (not supported). Settings apply to all
-        scan actions below.
+        With Manual, disabled modules are sent as null. Choosing a preset turns
+        every module off so only the preset is sent. Turn a module on to replace
+        that module on the preset.
       </Text>
+
+      <SettingsCard
+        title="Session preset"
+        subtitle={
+          config.sessionPresetMode === "manual"
+            ? "No preset — module settings define the full scanning configuration."
+            : "Native factory preset. Modules are off so only the preset is sent. Turn a module on to replace that module on the preset."
+        }
+      >
+        <EnumDropdown
+          label="Preset"
+          value={config.sessionPresetMode}
+          options={SESSION_PRESET_MODES}
+          onChanged={(mode) => {
+            config.applySessionPresetMode(mode);
+            onChanged();
+          }}
+        />
+        {presetUseCase ? (
+          <EnumDropdown
+            label="Scenario"
+            value={config.documentScenario}
+            options={DOCUMENT_SCENARIOS}
+            onChanged={(scenario) => {
+              config.documentScenario = scenario;
+              onChanged();
+            }}
+          />
+        ) : null}
+        {presetIsVideo ? (
+          <>
+            <EnumDropdown
+              label="Video quality"
+              value={config.videoQuality}
+              options={VIDEO_QUALITY_PROFILES}
+              onChanged={(quality) => {
+                config.videoQuality = quality;
+                onChanged();
+              }}
+            />
+            <EnumDropdown
+              label="Capture environment"
+              value={config.videoCaptureEnvironment}
+              options={VIDEO_CAPTURE_ENVIRONMENTS}
+              onChanged={(env) => {
+                config.videoCaptureEnvironment = env;
+                onChanged();
+              }}
+            />
+          </>
+        ) : null}
+        {presetIsPhoto ? (
+          <EnumDropdown
+            label="Photo quality"
+            value={config.photoQuality}
+            options={PHOTO_QUALITY_PROFILES}
+            onChanged={(quality) => {
+              config.photoQuality = quality;
+              onChanged();
+            }}
+          />
+        ) : null}
+      </SettingsCard>
 
       <EnumDropdown
         label="Scanning Mode"
@@ -61,6 +138,11 @@ export function ModuleSettingsPanel({ config, onChanged }: Props) {
           onChanged();
         }}
       />
+      {config.sessionPresetMode !== "manual" ? (
+        <Text style={styles.hint}>
+          Not sent while a preset is selected; the preset defines scanning mode.
+        </Text>
+      ) : null}
 
       <SettingsCard
         title="Session timeouts"
@@ -95,6 +177,24 @@ export function ModuleSettingsPanel({ config, onChanged }: Props) {
           value={config.showOnboardingDialog}
           onChanged={(v) => {
             config.showOnboardingDialog = v;
+            onChanged();
+          }}
+        />
+        <BoolSettingTile
+          title="Scan sound"
+          subtitle="Audio feedback when a scan step completes"
+          value={config.allowScanSound}
+          onChanged={(v) => {
+            config.allowScanSound = v;
+            onChanged();
+          }}
+        />
+        <BoolSettingTile
+          title="Passport only"
+          subtitle="Accept passport booklets and guide to the data page"
+          value={config.passportOnly}
+          onChanged={(v) => {
+            config.passportOnly = v;
             onChanged();
           }}
         />
@@ -141,7 +241,7 @@ function BarcodeModuleCard({
   return (
     <ModuleCard
       title="Barcode"
-      subtitle={config.barcodeEnabled ? "Enabled" : "Disabled (null)"}
+      subtitle={config.moduleToggleSubtitle(config.barcodeEnabled)}
       enabled={config.barcodeEnabled}
       onEnabledChanged={(v) => {
         config.barcodeEnabled = v;
@@ -238,9 +338,7 @@ function DocumentCaptureModuleCard({
   return (
     <ModuleCard
       title="Document capture"
-      subtitle={
-        config.documentCaptureEnabled ? "Enabled" : "Disabled (null)"
-      }
+      subtitle={config.moduleToggleSubtitle(config.documentCaptureEnabled)}
       enabled={config.documentCaptureEnabled}
       onEnabledChanged={(v) => {
         config.documentCaptureEnabled = v;
@@ -369,7 +467,7 @@ function MrzModuleCard({
   return (
     <ModuleCard
       title="MRZ"
-      subtitle={config.mrzEnabled ? "Enabled" : "Disabled (null)"}
+      subtitle={config.moduleToggleSubtitle(config.mrzEnabled)}
       enabled={config.mrzEnabled}
       onEnabledChanged={(v) => {
         config.mrzEnabled = v;
@@ -403,7 +501,7 @@ function VizModuleCard({
   return (
     <ModuleCard
       title="VIZ"
-      subtitle={config.vizEnabled ? "Enabled" : "Disabled (null)"}
+      subtitle={config.moduleToggleSubtitle(config.vizEnabled)}
       enabled={config.vizEnabled}
       onEnabledChanged={(enabled) => {
         config.vizEnabled = enabled;

@@ -1,7 +1,7 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 6.3.3 effective-5.10 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)
-// swift-module-flags: -target arm64-apple-ios16.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -O -enable-upcoming-feature ExistentialAny -enable-experimental-feature DebugDescriptionMacro -module-name BlinkIDUX -package-name blinkid_ios
-// swift-module-flags-ignorable:  -formal-cxx-interoperability-mode=off -interface-compiler-version 6.3.3
+// swift-compiler-version: Apple Swift version 6.4 effective-5.10 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)
+// swift-module-flags: -target arm64-apple-ios16.0 -enable-objc-interop -enable-library-evolution -language-mode 5 -O -enable-upcoming-feature ExistentialAny -enable-experimental-feature DebugDescriptionMacro -module-name BlinkIDUX -package-name blinkid_ios
+// swift-module-flags-ignorable:  -formal-cxx-interoperability-mode=off -interface-compiler-version 6.4
 @preconcurrency import AVFoundation
 import AudioToolbox
 import BlinkID
@@ -30,7 +30,6 @@ public actor BlinkIDEventStream : BlinkIDUX.EventStream {
     get
   }
   public typealias Event = BlinkIDUX.UIEvent
-  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
   @_semantics("defaultActor") nonisolated final public var unownedExecutor: _Concurrency.UnownedSerialExecutor {
     get
   }
@@ -39,7 +38,7 @@ public protocol BlinkIDClassFilter {
   func classAllowed(classInfo: BlinkID.BlinkIDSDK.DocumentClassInfo) -> Swift.Bool
 }
 public enum BlinkIDExtractionMode : Swift.Sendable {
-  case barcodeOnly, documentWithBarcode, fullDocument, documentWithMrz
+  case barcodeOnly, documentWithBarcode, fullDocument, documentWithMrz, passportOnly
   public static func == (a: BlinkIDUX.BlinkIDExtractionMode, b: BlinkIDUX.BlinkIDExtractionMode) -> Swift.Bool
   public func hash(into hasher: inout Swift.Hasher)
   public var hashValue: Swift.Int {
@@ -56,7 +55,7 @@ public actor BlinkIDAnalyzer : BlinkIDUX.CameraFrameAnalyzer {
   public var inactivityTimeoutDuration: Foundation.TimeInterval {
     get
   }
-  public init(sdk: BlinkID.BlinkIDSdk, blinkIdSessionSettings: BlinkID.BlinkIDSessionSettings = BlinkIDSessionSettings(inputImageSource: .video), eventStream: BlinkIDUX.BlinkIDEventStream = BlinkIDEventStream(), classFilter: (any BlinkIDUX.BlinkIDClassFilter)? = nil, redactionSettingsResolver: (any BlinkID.RedactionSettingsResolver)? = nil) async throws
+  public init(sdk: BlinkID.BlinkIDSdk, blinkIdSessionSettings: BlinkID.BlinkIDSessionSettings = BlinkIDSessionSettings(inputImageSource: .video), eventStream: BlinkIDUX.BlinkIDEventStream = BlinkIDEventStream(), passportOnly: Swift.Bool = false, classFilter: (any BlinkIDUX.BlinkIDClassFilter)? = nil, redactionSettingsResolver: (any BlinkID.RedactionSettingsResolver)? = nil) async throws
   nonisolated public var sessionNumber: Swift.Int {
     get
   }
@@ -75,7 +74,6 @@ public actor BlinkIDAnalyzer : BlinkIDUX.CameraFrameAnalyzer {
     get
   }
   @objc deinit
-  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
   @_semantics("defaultActor") nonisolated final public var unownedExecutor: _Concurrency.UnownedSerialExecutor {
     get
   }
@@ -170,6 +168,7 @@ public enum ReticleState : BlinkIDUX.ReticleStateProtocol {
   case barcode
   case barcodeSide
   case mrzSide
+  case passportDataPage
   case detecting
   case flip
   case error(Swift.String)
@@ -207,14 +206,14 @@ public class ReticleStateMachine : BlinkIDUX.ReticleStateMachineProtocol {
   public typealias ReticleStateType = BlinkIDUX.ReticleState
   @Combine.Published<BlinkIDUX.ReticleState> @_projectedValueProperty($reticleState) public var reticleState: BlinkIDUX.ReticleState {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     _modify
   }
   public var $reticleState: Combine.Published<BlinkIDUX.ReticleState>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   public var fallbackState: BlinkIDUX.ReticleState
@@ -234,6 +233,7 @@ public enum UIEvent : Swift.Equatable, Swift.Sendable {
   case wrongSidePassport(passportOrientation: BlinkIDUX.PassportOrientation)
   case blur
   case glare
+  case screenDetected
   case occlusion
   case tilt
   case tooClose
@@ -321,9 +321,6 @@ public protocol CameraFrameAnalyzer<Frame, Event> : Swift.Sendable {
   var inactivityTimeoutDuration: Foundation.TimeInterval { get async }
   var sessionNumber: Swift.Int { get }
 }
-extension BlinkIDUX.CameraFrameAnalyzer {
-  public func resetStepTimer() async
-}
 @_Concurrency.MainActor final public class Camera : BlinkIDUX.CameraModel {
   public enum CameraPosition : Swift.Equatable {
     case back
@@ -381,7 +378,6 @@ extension BlinkIDUX.CameraFrameAnalyzer {
 }
 @_hasMissingDesignatedInitializers public actor CaptureService {
   @objc deinit
-  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
   @_semantics("defaultActor") nonisolated final public var unownedExecutor: _Concurrency.UnownedSerialExecutor {
     get
   }
@@ -472,14 +468,14 @@ public protocol PreviewTarget {
 @_Concurrency.MainActor public class NetworkMonitor : Combine.ObservableObject {
   @Combine.Published<Swift.Bool> @_projectedValueProperty($isConnected) @_Concurrency.MainActor public var isConnected: Swift.Bool {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     _modify
   }
   @_Concurrency.MainActor public var $isConnected: Combine.Published<Swift.Bool>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @_Concurrency.MainActor public var isOffline: Swift.Bool {
@@ -503,74 +499,76 @@ public protocol AlertTypeProtocol : Swift.Identifiable {
   var pingletAlertType: BlinkID.UxEventPinglet.AlertType { get }
 }
 public struct ScanningUXSettings {
-  public init(showIntroductionAlert: Swift.Bool = true, showHelpButton: Swift.Bool = true, preferredCameraPosition: BlinkIDUX.Camera.CameraPosition = .back, allowHapticFeedback: Swift.Bool = true, allowScanSound: Swift.Bool = true)
+  public var helpTooltipShowDelay: Foundation.TimeInterval
+  public var helpTooltipHideDelay: Foundation.TimeInterval
+  public init(showIntroductionAlert: Swift.Bool = true, showHelpButton: Swift.Bool = true, preferredCameraPosition: BlinkIDUX.Camera.CameraPosition = .back, allowHapticFeedback: Swift.Bool = true, allowScanSound: Swift.Bool = true, helpTooltipShowDelay: Foundation.TimeInterval = 10.0, helpTooltipHideDelay: Foundation.TimeInterval = 5.0)
 }
 @_Concurrency.MainActor public class ScanningViewModel<T, U, V, A> : Foundation.ObservableObject where V : BlinkIDUX.ReticleStateMachineProtocol, A : BlinkIDUX.AlertTypeProtocol {
   @Combine.Published<T?> @_projectedValueProperty($scanningResult) @_Concurrency.MainActor public var scanningResult: T? {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     _modify
   }
   @_Concurrency.MainActor public var $scanningResult: Combine.Published<T?>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @Combine.Published<BlinkID.RegionOfInterest> @_projectedValueProperty($roi) @_Concurrency.MainActor public var roi: BlinkID.RegionOfInterest {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     _modify
   }
   @_Concurrency.MainActor public var $roi: Combine.Published<BlinkID.RegionOfInterest>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @_Concurrency.MainActor final public let reticleStateMachine: V
   @Combine.Published<Swift.Bool> @_projectedValueProperty($isTorchOn) @_Concurrency.MainActor public var isTorchOn: Swift.Bool {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
   }
   @_Concurrency.MainActor public var $isTorchOn: Combine.Published<Swift.Bool>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @Combine.Published<Swift.Bool> @_projectedValueProperty($isToastVisible) @_Concurrency.MainActor public var isToastVisible: Swift.Bool {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     _modify
   }
   @_Concurrency.MainActor public var $isToastVisible: Combine.Published<Swift.Bool>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @Combine.Published<Swift.Bool> @_projectedValueProperty($showIntroductionAlert) @_Concurrency.MainActor public var showIntroductionAlert: Swift.Bool {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
   }
   @_Concurrency.MainActor public var $showIntroductionAlert: Combine.Published<Swift.Bool>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @Combine.Published<A?> @_projectedValueProperty($alertType) @_Concurrency.MainActor public var alertType: A? {
     get
-    @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
+    @available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 6.0, *)
     set
   }
   @_Concurrency.MainActor public var $alertType: Combine.Published<A?>.Publisher {
     get
-    @available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+    @available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *)
     set
   }
   @_Concurrency.MainActor public init(analyzer: any BlinkIDUX.CameraFrameAnalyzer<BlinkID.CameraFrame, U>, uxSettings: BlinkIDUX.ScanningUXSettings = ScanningUXSettings(), reticleStateMachine: V, firstSideFinishedText: Swift.String, scanFinishedText: Swift.String)

@@ -90,6 +90,15 @@ class BlinkIdSerializationUtils {
             if let documentNumber = scanningResult.documentNumber {
                 scanningResultDict["documentNumber"] = serializeStringResult(documentNumber)
             }
+            if let vehicleNumber = scanningResult.vehicleNumber {
+                scanningResultDict["vehicleNumber"] = serializeStringResult(vehicleNumber)
+            }
+            if let passportNumber = scanningResult.passportNumber {
+                scanningResultDict["passportNumber"] = serializeStringResult(passportNumber)
+            }
+            if let trafficParticipantNumber = scanningResult.trafficParticipantNumber {
+                scanningResultDict["trafficParticipantNumber"] = serializeStringResult(trafficParticipantNumber)
+            }
             if let cardAccessNumber = scanningResult.cardAccessNumber {
                 scanningResultDict["cardAccessNumber"] = serializeStringResult(cardAccessNumber)
             }
@@ -273,6 +282,8 @@ class BlinkIdSerializationUtils {
         switch id {
         case .schengen_area:
             return "schengenArea"
+        case .britishVirginIslands:
+            return "britishVirginIslands"
         default:
             return id.rawValue
         }
@@ -283,7 +294,10 @@ class BlinkIdSerializationUtils {
     }
 
     private static func serializeDocumentTypeId(_ id: DocumentTypeID) -> String {
-        id.rawValue
+        if id == .byidCard {
+            return "byIdCard"
+        }
+        return id.rawValue
     }
 
     private static func serializeClassInfoComponent(id: String?, rawValue: String) -> [String: Any] {
@@ -751,6 +765,15 @@ class BlinkIdSerializationUtils {
             }
             if let documentNumber = vizResult.documentNumber {
                 vizResultDict["documentNumber"] = serializeStringResult(documentNumber)
+            }
+            if let vehicleNumber = vizResult.vehicleNumber {
+                vizResultDict["vehicleNumber"] = serializeStringResult(vehicleNumber)
+            }
+            if let passportNumber = vizResult.passportNumber {
+                vizResultDict["passportNumber"] = serializeStringResult(passportNumber)
+            }
+            if let trafficParticipantNumber = vizResult.trafficParticipantNumber {
+                vizResultDict["trafficParticipantNumber"] = serializeStringResult(trafficParticipantNumber)
             }
             if let cardAccessNumber = vizResult.cardAccessNumber {
                 vizResultDict["cardAccessNumber"] = serializeStringResult(cardAccessNumber)

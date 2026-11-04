@@ -12,6 +12,12 @@ import com.microblink.blinkid.core.result.classinfo.DocumentClassInfo
 import com.microblink.blinkid.core.result.classinfo.RegionId
 import com.microblink.blinkid.core.result.classinfo.DocumentTypeId
 import com.microblink.blinkid.core.session.BlinkIdSessionSettings
+import com.microblink.blinkid.core.settings.usecase.DocumentPhotoUseCase
+import com.microblink.blinkid.core.settings.usecase.DocumentScenario
+import com.microblink.blinkid.core.settings.usecase.DocumentVideoUseCase
+import com.microblink.blinkid.core.settings.usecase.PhotoQualityProfile
+import com.microblink.blinkid.core.settings.usecase.VideoCaptureEnvironment
+import com.microblink.blinkid.core.settings.usecase.VideoQualityProfile
 import com.microblink.blinkid.core.session.ScanningMode
 import com.microblink.blinkid.core.settings.DocumentNumberRedactionSettings
 import com.microblink.blinkid.core.settings.RedactionSettings
@@ -96,13 +102,96 @@ object BlinkIdDeserializationUtilities {
       )
     }
 
-    return BlinkIdSessionSettings(
-      inputImageSource = if (isDirectApi) InputImageSource.Photo else InputImageSource.Video,
-      scanningMode = deserializeScanningMode(sessionSettingsMap.optString("scanningMode")),
-      scanningSettings = deserializeScanningSettings(
-        sessionSettingsMap.optJSONObject("scanningSettings")
-      ),
+    val preset = sessionSettingsMap.optString("sessionPreset").takeIf { it.isNotBlank() }
+    var settings = when (preset) {
+      "documentVideo" -> BlinkIdSessionSettings.documentVideo(
+        deserializeDocumentVideoUseCase(sessionSettingsMap.optJSONObject("documentVideoUseCase"))
+      )
+      "documentPhoto" -> BlinkIdSessionSettings.documentPhoto(
+        deserializeDocumentPhotoUseCase(sessionSettingsMap.optJSONObject("documentPhotoUseCase"))
+      )
+      "standaloneBarcode" -> BlinkIdSessionSettings.standaloneBarcode()
+      "verifyCapture" -> BlinkIdSessionSettings.verifyCapture()
+      else -> BlinkIdSessionSettings(
+        inputImageSource = if (isDirectApi) InputImageSource.Photo else InputImageSource.Video,
+        scanningMode = deserializeScanningMode(sessionSettingsMap.optString("scanningMode")),
+        scanningSettings = deserializeScanningSettings(
+          sessionSettingsMap.optJSONObject("scanningSettings")
+        ),
+      )
+    }
+
+    if (preset != null) {
+      if (sessionSettingsMap.has("scanningMode")) {
+        settings = settings.copy(
+          scanningMode = deserializeScanningMode(sessionSettingsMap.optString("scanningMode"))
+        )
+      }
+      val scanningSettingsPatch = sessionSettingsMap.optJSONObject("scanningSettings")
+      if (scanningSettingsPatch != null && scanningSettingsPatch.length() > 0) {
+        settings = settings.copy(
+          scanningSettings = mergeScanningSettings(
+            settings.scanningSettings,
+            scanningSettingsPatch
+          )
+        )
+      }
+    }
+    if (isDirectApi) {
+      settings = settings.copy(inputImageSource = InputImageSource.Photo)
+    }
+
+    return settings
+  }
+
+  private fun deserializeDocumentVideoUseCase(useCaseMap: JSONObject?): DocumentVideoUseCase {
+    if (useCaseMap == null) return DocumentVideoUseCase()
+    return DocumentVideoUseCase(
+      scenario = parseDocumentScenario(useCaseMap.optString("scenario")),
+      quality = parseVideoQualityProfile(useCaseMap.optString("quality")),
+      captureEnvironment = parseVideoCaptureEnvironment(useCaseMap.optString("captureEnvironment")),
     )
+  }
+
+  private fun deserializeDocumentPhotoUseCase(useCaseMap: JSONObject?): DocumentPhotoUseCase {
+    if (useCaseMap == null) return DocumentPhotoUseCase()
+    return DocumentPhotoUseCase(
+      scenario = parseDocumentScenario(useCaseMap.optString("scenario")),
+      quality = parsePhotoQualityProfile(useCaseMap.optString("quality")),
+    )
+  }
+
+  private fun parseDocumentScenario(value: String?): DocumentScenario {
+    return when (value) {
+      "mrzMandatory" -> DocumentScenario.MrzMandatory
+      "mrzOnly" -> DocumentScenario.MrzOnly
+      "barcodeOnly" -> DocumentScenario.BarcodeOnly
+      else -> DocumentScenario.General
+    }
+  }
+
+  private fun parseVideoQualityProfile(value: String?): VideoQualityProfile {
+    return when (value) {
+      "highSpeed" -> VideoQualityProfile.HighSpeed
+      "highAccuracy" -> VideoQualityProfile.HighAccuracy
+      "permissive" -> VideoQualityProfile.Permissive
+      else -> VideoQualityProfile.Balanced
+    }
+  }
+
+  private fun parseVideoCaptureEnvironment(value: String?): VideoCaptureEnvironment {
+    return when (value) {
+      "stationary" -> VideoCaptureEnvironment.Stationary
+      else -> VideoCaptureEnvironment.HandHeld
+    }
+  }
+
+  private fun parsePhotoQualityProfile(value: String?): PhotoQualityProfile {
+    return when (value) {
+      "highAccuracy" -> PhotoQualityProfile.HighAccuracy
+      "permissive" -> PhotoQualityProfile.Permissive
+      else -> PhotoQualityProfile.Balanced
+    }
   }
 
   fun deserializeBlinkIdUxSettings(
@@ -118,10 +207,19 @@ object BlinkIdDeserializationUtilities {
       ?: scanningUxSettingsMap?.optInt("inactivityTimeoutDuration")
       ?: 10_000
 
+    val helpTooltipShowDelayMs =
+      scanningUxSettingsMap?.optInt("helpTooltipShowDelay", 10_000) ?: 10_000
+    val helpTooltipHideDelayMs =
+      scanningUxSettingsMap?.optInt("helpTooltipHideDelay", 5_000) ?: 5_000
+
     return BlinkIdUxSettings(
       stepTimeoutDuration = stepTimeoutMs.milliseconds,
       inactivityTimeoutDuration = inactivityTimeoutMs.milliseconds,
       allowHapticFeedback = scanningUxSettingsMap?.optBoolean("allowHapticFeedback", true) ?: true,
+      allowScanSound = scanningUxSettingsMap?.optBoolean("allowScanSound", true) ?: true,
+      passportOnly = scanningUxSettingsMap?.optBoolean("passportOnly", false) ?: false,
+      helpTooltipShowDelay = helpTooltipShowDelayMs.milliseconds,
+      helpTooltipHideDelay = helpTooltipHideDelayMs.milliseconds,
       classFilter = classFilterMap?.let { CustomClassFilter(it.toString()) },
       redactionSettingsResolver = redactionSettingsResolverMap?.let {
         CustomRedactionSettingsResolver(it.toString())
@@ -237,6 +335,45 @@ object BlinkIdDeserializationUtilities {
         .optInt("maxAllowedMismatchesPerField", 0)
         .toUInt(),
     )
+  }
+
+  private fun mergeScanningSettings(
+    base: ScanningSettings,
+    patch: JSONObject
+  ): ScanningSettings {
+    if (patch.length() == 0) return base
+
+    var settings = base
+    if (patch.has("documentCaptureModule")) {
+      settings = settings.copy(
+        documentCaptureModule = patch.optJSONObject("documentCaptureModule")
+          ?.let { deserializeDocumentCaptureModule(it) }
+      )
+    }
+    if (patch.has("barcodeModule")) {
+      settings = settings.copy(
+        barcodeModule = patch.optJSONObject("barcodeModule")
+          ?.let { deserializeBarcodeModule(it) }
+      )
+    }
+    if (patch.has("mrzModule")) {
+      settings = settings.copy(
+        mrzModule = patch.optJSONObject("mrzModule")
+          ?.let { deserializeMrzModule(it) }
+      )
+    }
+    if (patch.has("vizModule")) {
+      settings = settings.copy(
+        vizModule = patch.optJSONObject("vizModule")
+          ?.let { deserializeVizModule(it) }
+      )
+    }
+    if (patch.has("maxAllowedMismatchesPerField")) {
+      settings = settings.copy(
+        maxAllowedMismatchesPerField = patch.optInt("maxAllowedMismatchesPerField", 0).toUInt()
+      )
+    }
+    return settings
   }
 
   private fun deserializeDocumentCaptureModule(

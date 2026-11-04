@@ -5,6 +5,9 @@ import type {
   MrzModuleSettings,
   BarcodeModuleSettings,
   VizModuleSettings,
+  SessionPreset,
+  DocumentVideoUseCase,
+  DocumentPhotoUseCase,
 } from "./types";
 
 /**
@@ -231,6 +234,26 @@ export type BlinkIdSdkSettings = {
  */
 export type BlinkIdSessionSettings = Partial<{
   /**
+   * Builds session settings from a native preset factory instead of manual module tuning.
+   *
+   * When set, {@link documentVideoUseCase} or {@link documentPhotoUseCase} apply to
+   * `documentVideo` and `documentPhoto` respectively. {@link scanningMode} overrides
+   * the preset when provided. {@link scanningSettings} merges onto the preset: only keys
+   * present in the JSON are applied; omit `scanningSettings` or use `{}` to keep preset defaults.
+   */
+  sessionPreset: SessionPreset;
+
+  /**
+   * Use case options for {@link SessionPreset.DocumentVideo}.
+   */
+  documentVideoUseCase: DocumentVideoUseCase;
+
+  /**
+   * Use case options for {@link SessionPreset.DocumentPhoto}.
+   */
+  documentPhotoUseCase: DocumentPhotoUseCase;
+
+  /**
    * The scanning mode to be used during the scanning session.
    *
    * Specifies whether the scanning is for a single side of a document or multiple
@@ -370,6 +393,16 @@ export type BlinkIdScanningUxSettings = Partial<{
   allowHapticFeedback: boolean;
 
   /**
+   * Determines whether scan completion sounds are played during camera scanning.
+   *
+   * When enabled, the SDK may play short audio feedback when a scan step completes.
+   * When disabled, no scan sounds are produced.
+   *
+   * Default: `true`
+   */
+  allowScanSound: boolean;
+
+  /**
    * The preferred camera position to use when capturing document.
    *
    * This value represents the user’s choice of front or back camera.
@@ -378,4 +411,26 @@ export type BlinkIdScanningUxSettings = Partial<{
    * Default: {@link PreferredCamera.back}
    */
   preferredCamera: PreferredCamera;
+
+  /**
+   * When `true`, accepts only passport booklets and guides the user to the data page.
+   *
+   * Default: `false`
+   */
+  passportOnly: boolean;
+
+  /**
+   * Delay in milliseconds before the help tooltip is shown automatically.
+   * Zero or negative disables automatic display.
+   *
+   * Default: `10000`
+   */
+  helpTooltipShowDelay: number;
+
+  /**
+   * Delay in milliseconds before the help tooltip is hidden after being shown.
+   *
+   * Default: `5000`
+   */
+  helpTooltipHideDelay: number;
 }>;

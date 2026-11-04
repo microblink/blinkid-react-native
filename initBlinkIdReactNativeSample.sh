@@ -39,7 +39,7 @@ if [ "$IS_LOCAL_BUILD" = true ]; then
 
   # Go the sample folder and install the library
   popd > /dev/null
-  npm i --save $blink_id_plugin_path/microblink-blinkid-react-native-8001.0.0.tgz
+  npm i --save $blink_id_plugin_path/microblink-blinkid-react-native-8002.0.0.tgz
 
 else
   # Download BlinkID React Native via NPM
@@ -50,9 +50,11 @@ fi
 # React-native-image-picker plugin needed only for sample application with DirectAPI to get the document images
 npm i react-native-image-picker
 
-# BlinkID SDK Kotlin requirements
+# BlinkID SDK Android requirements (Kotlin 2.2.21, compileSdk/targetSdk 37)
 pushd android || exit 1
 sed -i '' 's/kotlinVersion = "[0-9.]*"/kotlinVersion = "2.2.21"/' build.gradle
+sed -i '' 's/compileSdkVersion = [0-9]*/compileSdkVersion = 37/' build.gradle
+sed -i '' 's/targetSdkVersion = [0-9]*/targetSdkVersion = 37/' build.gradle
 popd
 
 # Enter into the ios project folder
@@ -61,6 +63,9 @@ pushd ios || exit 1
 # Force minimal iOS version
 sed -i '' "s/platform :ios, min_ios_version_supported/platform :ios, '16.0'/" Podfile
 
+# Pod post_install fixes:
+# - Raise IPHONEOS_DEPLOYMENT_TARGET to match the app (16.0). Some pods still declare 9.0;
+#   Xcode 27 rejects deployment targets below 15.0.
 # Fix fmt compilation errors with newer Xcode/Clang:
 # React Native 0.82 uses C++20, which causes the fmt library to use a C++20 feature called
 # 'consteval' that doesn't work reliably on iOS. By compiling just the fmt pod with C++17,
@@ -70,10 +75,15 @@ python3 << 'PYEOF'
 with open('Podfile', 'r') as f:
     content = f.read()
 
-fmt_fix = """
+pod_post_install_fixes = """
+    min_ios = '16.0'
     installer.pods_project.targets.each do |target|
-      if target.name == 'fmt'
-        target.build_configurations.each do |config|
+      target.build_configurations.each do |config|
+        deployment_target = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']
+        if deployment_target.nil? || deployment_target.to_f < min_ios.to_f
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios
+        end
+        if target.name == 'fmt'
           config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++17'
         end
       end
@@ -81,20 +91,53 @@ fmt_fix = """
 """
 
 old = "      # :ccache_enabled => true\n    )\n  end\nend"
-new = "      # :ccache_enabled => true\n    )" + fmt_fix + "  end\nend"
+new = "      # :ccache_enabled => true\n    )" + pod_post_install_fixes + "  end\nend"
 content = content.replace(old, new)
 
 with open('Podfile', 'w') as f:
     f.write(content)
 PYEOF
 
-# Add the camera and photo usage descriptions into Info.plist to enable camera scanning and the image upload via gallery
-sed -i '' '/<dict>/a\
-  <key>NSCameraUsageDescription</key>\
-  <string>Enable the camera usage for BlinkID default UX scanning</string>\
-  <key>NSPhotoLibraryUsageDescription</key>\
-  <string>Enable photo gallery usage for BlinkID DirectAPI scanning</string>\
-' $appName/Info.plist
+# UIScene lifecycle (required when building with iOS 27 SDK) and Info.plist fixes
+cp ../../sample_files/ios/AppDelegate.swift $appName/AppDelegate.swift
+sed -i '' "s/__MODULE_NAME__/$appName/g" $appName/AppDelegate.swift
+
+python3 << PYEOF
+import plistlib
+from pathlib import Path
+
+plist_path = Path("$appName/Info.plist")
+with plist_path.open("rb") as f:
+    info = plistlib.load(f)
+
+camera_usage = "Enable the camera usage for BlinkID default UX scanning"
+photo_usage = "Enable photo gallery usage for BlinkID DirectAPI scanning"
+
+ats = info.get("NSAppTransportSecurity")
+if isinstance(ats, dict):
+    ats.pop("NSCameraUsageDescription", None)
+    ats.pop("NSPhotoLibraryUsageDescription", None)
+
+info["NSCameraUsageDescription"] = camera_usage
+info["NSPhotoLibraryUsageDescription"] = photo_usage
+info["NSLocalNetworkUsageDescription"] = (
+    "Allow Metro bundler to load the JavaScript bundle during development."
+)
+info["UIApplicationSceneManifest"] = {
+    "UIApplicationSupportsMultipleScenes": False,
+    "UISceneConfigurations": {
+        "UIWindowSceneSessionRoleApplication": [
+            {
+                "UISceneConfigurationName": "Default Configuration",
+                "UISceneDelegateClassName": "\$(PRODUCT_MODULE_NAME).SceneDelegate",
+            }
+        ]
+    },
+}
+
+with plist_path.open("wb") as f:
+    plistlib.dump(info, f)
+PYEOF
 
 # Disable Flipper since it spams console with errors
 export NO_FLIPPER=1

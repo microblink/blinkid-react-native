@@ -69,10 +69,13 @@ import BlinkIDUX
                 classFilterDict = classFilterSettings
                 redactionSettingsResolverDict = redactionSettingsResolver
                 
+                let passportOnly = blinkIdScanningUxSettings["passportOnly"] as? Bool ?? false
+
                 let analyzer = try await BlinkIDAnalyzer(
                     sdk: blinkIdSdk,
                     blinkIdSessionSettings: sessionSettings,
                     eventStream: BlinkIDEventStream(),
+                    passportOnly: passportOnly,
                     classFilter: self,
                     redactionSettingsResolver: self
                 )

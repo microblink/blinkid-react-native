@@ -134,70 +134,184 @@ struct BlinkIdDeserializationUtils {
     }
     
     static func deserializeBlinkIdSessionSettings(_ sessionSettingsDict: Dictionary<String, Any>?, isFromDirectApi: Bool = false) -> BlinkIDSessionSettings {
-        var blinkidSessionSettings = BlinkIDSessionSettings()
-        
-        if let scanningSettings = sessionSettingsDict?["scanningSettings"] as? Dictionary<String, Any> {
-            blinkidSessionSettings.scanningSettings = deserializeBlinkIdScanningSettings(scanningSettings)
+        let preset = sessionSettingsDict?["sessionPreset"] as? String
+
+        var blinkidSessionSettings: BlinkIDSessionSettings
+        switch preset {
+        case "documentVideo":
+            let useCaseDict = sessionSettingsDict?["documentVideoUseCase"] as? Dictionary<String, Any>
+            blinkidSessionSettings = BlinkIDSessionSettings.documentVideo(
+                deserializeDocumentVideoUseCase(useCaseDict)
+            )
+        case "documentPhoto":
+            let useCaseDict = sessionSettingsDict?["documentPhotoUseCase"] as? Dictionary<String, Any>
+            blinkidSessionSettings = BlinkIDSessionSettings.documentPhoto(
+                deserializeDocumentPhotoUseCase(useCaseDict)
+            )
+        case "standaloneBarcode":
+            blinkidSessionSettings = BlinkIDSessionSettings.standaloneBarcode()
+        case "verifyCapture":
+            blinkidSessionSettings = BlinkIDSessionSettings.verifyCapture()
+        default:
+            blinkidSessionSettings = BlinkIDSessionSettings()
         }
-        
+
+        let usesPresetFactory: Bool
+        switch preset {
+        case "documentVideo", "documentPhoto", "standaloneBarcode", "verifyCapture":
+            usesPresetFactory = true
+        default:
+            usesPresetFactory = false
+        }
+
+        if let scanningSettings = sessionSettingsDict?["scanningSettings"] as? Dictionary<String, Any>,
+           !scanningSettings.isEmpty {
+            if usesPresetFactory {
+                blinkidSessionSettings.scanningSettings = mergeScanningSettings(
+                    base: blinkidSessionSettings.scanningSettings,
+                    patch: scanningSettings
+                )
+            } else {
+                blinkidSessionSettings.scanningSettings = deserializeBlinkIdScanningSettings(scanningSettings)
+            }
+        }
+
         if let scanningMode = sessionSettingsDict?["scanningMode"] as? String {
             blinkidSessionSettings.scanningMode = deseralizeScanningMode(scanningMode)
         }
-        
+
         if let stepTimeoutDuration = sessionSettingsDict?["stepTimeoutDuration"] as? Int {
             blinkidSessionSettings.stepTimeoutDuration = Double(stepTimeoutDuration) / 1000.0
         }
-        
+
         if let inactivityTimeoutDuration = sessionSettingsDict?["inactivityTimeoutDuration"] as? Int {
             blinkidSessionSettings.inactivityTimeoutDuration = Double(inactivityTimeoutDuration) / 1000.0
         }
-        
+
         if isFromDirectApi {
             blinkidSessionSettings.inputImageSource = .photo
         }
-        
+
         return blinkidSessionSettings
+    }
+
+    private static func deserializeDocumentVideoUseCase(
+        _ useCaseDict: Dictionary<String, Any>?
+    ) -> DocumentVideoUseCase {
+        DocumentVideoUseCase(
+            scenario: parseDocumentScenario(useCaseDict?["scenario"] as? String),
+            quality: parseVideoQualityProfile(useCaseDict?["quality"] as? String),
+            captureEnvironment: parseVideoCaptureEnvironment(
+                useCaseDict?["captureEnvironment"] as? String
+            )
+        )
+    }
+
+    private static func deserializeDocumentPhotoUseCase(
+        _ useCaseDict: Dictionary<String, Any>?
+    ) -> DocumentPhotoUseCase {
+        DocumentPhotoUseCase(
+            scenario: parseDocumentScenario(useCaseDict?["scenario"] as? String),
+            quality: parsePhotoQualityProfile(useCaseDict?["quality"] as? String)
+        )
+    }
+
+    private static func parseDocumentScenario(_ value: String?) -> DocumentScenario {
+        switch value {
+        case "mrzMandatory":
+            return .mrzMandatory
+        case "mrzOnly":
+            return .mrzOnly
+        case "barcodeOnly":
+            return .barcodeOnly
+        default:
+            return .general
+        }
+    }
+
+    private static func parseVideoQualityProfile(_ value: String?) -> VideoQualityProfile {
+        switch value {
+        case "highSpeed":
+            return .highSpeed
+        case "highAccuracy":
+            return .highAccuracy
+        case "permissive":
+            return .permissive
+        default:
+            return .balanced
+        }
+    }
+
+    private static func parseVideoCaptureEnvironment(_ value: String?) -> VideoCaptureEnvironment {
+        switch value {
+        case "stationary":
+            return .stationary
+        default:
+            return .handHeld
+        }
+    }
+
+    private static func parsePhotoQualityProfile(_ value: String?) -> PhotoQualityProfile {
+        switch value {
+        case "highAccuracy":
+            return .highAccuracy
+        case "permissive":
+            return .permissive
+        default:
+            return .balanced
+        }
     }
     
     static func deserializeBlinkIdScanningSettings(_ scanningSettingsDict: Dictionary<String, Any>?) -> ScanningSettings {
-        var scanningSettings = ScanningSettings()
         guard let scanningSettingsDict else {
-            return scanningSettings
+            return ScanningSettings()
+        }
+        return mergeScanningSettings(base: ScanningSettings(), patch: scanningSettingsDict)
+    }
+
+    private static func mergeScanningSettings(
+        base: ScanningSettings,
+        patch: Dictionary<String, Any>
+    ) -> ScanningSettings {
+        if patch.isEmpty {
+            return base
         }
 
-        if scanningSettingsDict.keys.contains("barcodeModule") {
-            if let barcodeModuleDict = scanningSettingsDict["barcodeModule"] as? Dictionary<String, Any> {
+        var scanningSettings = base
+
+        if patch.keys.contains("barcodeModule") {
+            if let barcodeModuleDict = patch["barcodeModule"] as? Dictionary<String, Any> {
                 scanningSettings.barcodeModule = deserializeBarcodeModule(barcodeModuleDict)
             } else {
                 scanningSettings.barcodeModule = nil
             }
         }
 
-        if scanningSettingsDict.keys.contains("documentCaptureModule") {
-            if let documentCaptureDict = scanningSettingsDict["documentCaptureModule"] as? Dictionary<String, Any> {
+        if patch.keys.contains("documentCaptureModule") {
+            if let documentCaptureDict = patch["documentCaptureModule"] as? Dictionary<String, Any> {
                 scanningSettings.documentCaptureModule = deserializeDocumentCaptureModule(documentCaptureDict)
             } else {
                 scanningSettings.documentCaptureModule = nil
             }
         }
 
-        if scanningSettingsDict.keys.contains("mrzModule") {
-            if let mrzModuleDict = scanningSettingsDict["mrzModule"] as? Dictionary<String, Any> {
+        if patch.keys.contains("mrzModule") {
+            if let mrzModuleDict = patch["mrzModule"] as? Dictionary<String, Any> {
                 scanningSettings.mrzModule = deserializeMrzModule(mrzModuleDict)
             } else {
                 scanningSettings.mrzModule = nil
             }
         }
 
-        if scanningSettingsDict.keys.contains("vizModule") {
-            if let vizModuleDict = scanningSettingsDict["vizModule"] as? Dictionary<String, Any> {
+        if patch.keys.contains("vizModule") {
+            if let vizModuleDict = patch["vizModule"] as? Dictionary<String, Any> {
                 scanningSettings.vizModule = deserializeVizModule(vizModuleDict)
             } else {
                 scanningSettings.vizModule = nil
             }
         }
 
-        if let maxAllowedMismatchesPerField = scanningSettingsDict["maxAllowedMismatchesPerField"] as? Int {
+        if let maxAllowedMismatchesPerField = patch["maxAllowedMismatchesPerField"] as? Int {
             scanningSettings.maxAllowedMismatchesPerField = maxAllowedMismatchesPerField
         }
 
@@ -463,11 +577,16 @@ struct BlinkIdDeserializationUtils {
         }
 
         let preferredCameraRaw = scanningUxSettingsDict["preferredCamera"] as? String
+        let helpTooltipShowDelayMs = scanningUxSettingsDict["helpTooltipShowDelay"] as? Int ?? 10_000
+        let helpTooltipHideDelayMs = scanningUxSettingsDict["helpTooltipHideDelay"] as? Int ?? 5_000
         return ScanningUXSettings(
             showIntroductionAlert: scanningUxSettingsDict["showOnboardingDialog"] as? Bool ?? true,
             showHelpButton: scanningUxSettingsDict["showHelpButton"] as? Bool ?? true,
             preferredCameraPosition: deserializePreferredCameraPosition(preferredCameraRaw ?? "back"),
-            allowHapticFeedback: scanningUxSettingsDict["allowHapticFeedback"] as? Bool ?? true)
+            allowHapticFeedback: scanningUxSettingsDict["allowHapticFeedback"] as? Bool ?? true,
+            allowScanSound: scanningUxSettingsDict["allowScanSound"] as? Bool ?? true,
+            helpTooltipShowDelay: TimeInterval(helpTooltipShowDelayMs) / 1000.0,
+            helpTooltipHideDelay: TimeInterval(helpTooltipHideDelayMs) / 1000.0)
     }
     
     static func deserializePreferredCameraPosition(_ value: String) -> Camera.CameraPosition {
@@ -588,7 +707,10 @@ struct BlinkIdDeserializationUtils {
     }
 
     private static func parseDocumentTypeId(_ value: String) -> DocumentTypeID? {
-        DocumentTypeID(rawValue: value)
+        if value == "byIdCard" {
+            return .byidCard
+        }
+        return DocumentTypeID(rawValue: value)
     }
     
     static func sanitizeDictionary(_ dictionary: Dictionary<String, Any>?) -> Dictionary<String, Any>? {
