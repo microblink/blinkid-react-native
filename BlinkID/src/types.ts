@@ -1384,6 +1384,24 @@ export type VizResult = {
   documentNumber?: StringResult;
 
   /**
+   * The vehicle number.
+   *
+   */
+  vehicleNumber?: StringResult;
+
+  /**
+   * The passport number.
+   *
+   */
+  passportNumber?: StringResult;
+
+  /**
+   * The traffic participant number.
+   *
+   */
+  trafficParticipantNumber?: StringResult;
+
+  /**
    * The card access number
    */
   cardAccessNumber?: StringResult;
@@ -2810,6 +2828,196 @@ export type ParentInfo = {
 };
 
 /**
+ * Session settings factory preset for {@link BlinkIdSessionSettings}.
+ *
+ * Maps to native `BlinkIdSessionSettings` preset factories on Android and iOS.
+ *
+ */
+export const SessionPreset = {
+  /**
+   * Live document scanning from a camera stream.
+   *
+   */
+  DocumentVideo: "documentVideo",
+
+  /**
+   * Document scanning from a single photo or gallery image.
+   *
+   */
+  DocumentPhoto: "documentPhoto",
+
+  /**
+   * Standalone barcode scanning without document detection.
+   *
+   */
+  StandaloneBarcode: "standaloneBarcode",
+
+  /**
+   * BlinkID Verify live capture (face image, input and barcode images, no result aggregation).
+   *
+   */
+  VerifyCapture: "verifyCapture",
+} as const;
+
+export type SessionPreset = (typeof SessionPreset)[keyof typeof SessionPreset];
+
+/**
+ * Document scanning scenario for session presets.
+ *
+ */
+export const DocumentScenario = {
+  /**
+   * Default module topology for general ID scanning.
+   *
+   */
+  General: "general",
+
+  /**
+   * Automatic scan with mandatory MRZ; VIZ and barcode modules remain enabled.
+   *
+   */
+  MrzMandatory: "mrzMandatory",
+
+  /**
+   * MRZ extraction only; VIZ and barcode disabled; single-side scan with mandatory MRZ.
+   *
+   */
+  MrzOnly: "mrzOnly",
+
+  /**
+   * Barcode extraction from a detected document; VIZ and MRZ disabled; mandatory barcode.
+   *
+   */
+  BarcodeOnly: "barcodeOnly",
+} as const;
+
+export type DocumentScenario =
+  (typeof DocumentScenario)[keyof typeof DocumentScenario];
+
+/**
+ * Video (camera) quality profile for {@link DocumentVideoUseCase}.
+ *
+ */
+export const VideoQualityProfile = {
+  /**
+   * Balanced speed and quality.
+   *
+   */
+  Balanced: "balanced",
+
+  /**
+   * Fastest acceptable frames; lower blur/glare/tilt sensitivity.
+   *
+   */
+  HighSpeed: "highSpeed",
+
+  /**
+   * Higher quality thresholds; requires face image; disables multi-frame aggregation.
+   *
+   */
+  HighAccuracy: "highAccuracy",
+
+  /**
+   * Lower quality thresholds; disables blur/glare/tilt/lighting rejection.
+   *
+   */
+  Permissive: "permissive",
+} as const;
+
+export type VideoQualityProfile =
+  (typeof VideoQualityProfile)[keyof typeof VideoQualityProfile];
+
+/**
+ * Capture environment for {@link DocumentVideoUseCase}.
+ *
+ */
+export const VideoCaptureEnvironment = {
+  /**
+   * Hand-held mobile camera capture.
+   *
+   */
+  HandHeld: "handHeld",
+
+  /**
+   * Stationary capture; document may reach the frame edge.
+   *
+   */
+  Stationary: "stationary",
+} as const;
+
+export type VideoCaptureEnvironment =
+  (typeof VideoCaptureEnvironment)[keyof typeof VideoCaptureEnvironment];
+
+/**
+ * Photo (single image) quality profile for {@link DocumentPhotoUseCase}.
+ *
+ */
+export const PhotoQualityProfile = {
+  /**
+   * Balanced quality thresholds.
+   *
+   */
+  Balanced: "balanced",
+
+  /**
+   * Higher quality thresholds; requires face image extraction.
+   *
+   */
+  HighAccuracy: "highAccuracy",
+
+  /**
+   * Lower quality thresholds; disables rejection and VIZ character validation.
+   *
+   */
+  Permissive: "permissive",
+} as const;
+
+export type PhotoQualityProfile =
+  (typeof PhotoQualityProfile)[keyof typeof PhotoQualityProfile];
+
+/**
+ * Use case options for {@link SessionPreset.DocumentVideo}.
+ *
+ */
+export type DocumentVideoUseCase = Partial<{
+  /**
+   * Module topology and mandatory presence rules for the scan.
+   *
+   */
+  scenario: DocumentScenario;
+
+  /**
+   * Speed vs. accuracy tuning for frame selection and quality thresholds.
+   *
+   */
+  quality: VideoQualityProfile;
+
+  /**
+   * Hand-held mobile capture vs. stationary capture.
+   *
+   */
+  captureEnvironment: VideoCaptureEnvironment;
+}>;
+
+/**
+ * Use case options for {@link SessionPreset.DocumentPhoto}.
+ *
+ */
+export type DocumentPhotoUseCase = Partial<{
+  /**
+   * Module topology and mandatory presence rules for the scan.
+   *
+   */
+  scenario: DocumentScenario;
+
+  /**
+   * Quality thresholds for single-image extraction.
+   *
+   */
+  quality: PhotoQualityProfile;
+}>;
+
+/**
  * Represents the mode of document scanning.
  *
  * This enum class defines whether the scanning process is limited to a single
@@ -3639,7 +3847,7 @@ export const CountryID = {
 
   VaticanCity: "vaticanCity",
 
-  VirginIslandsBritish: "virginIslandsBritish",
+  BritishVirginIslands: "britishVirginIslands",
 
   VirginIslandsOfTheUnitedStates: "virginIslandsOfTheUnitedStates",
 
@@ -3745,6 +3953,8 @@ export const RegionID = {
   NewSouthWales: "newSouthWales",
 
   NewYork: "newYork",
+
+  NorthernIreland: "northernIreland",
 
   NorthernTerritory: "northernTerritory",
 
@@ -4157,6 +4367,14 @@ export const DocumentTypeID = {
   PoliceId: "policeId",
 
   OriginCard: "originCard",
+
+  SpecifiedResidenceCard: "specifiedResidenceCard",
+
+  GoldenCard: "goldenCard",
+
+  VehicleOwnershipCertificate: "vehicleOwnershipCertificate",
+
+  ByIdCard: "byIdCard",
 } as const;
 export type DocumentTypeID = (typeof DocumentTypeID)[keyof typeof DocumentTypeID];
 /**
@@ -4307,6 +4525,12 @@ export const FieldType = {
   HusbandName: "husbandName",
 
   CardAccessNumber: "cardAccessNumber",
+
+  VehicleNumber: "vehicleNumber",
+
+  PassportNumber: "passportNumber",
+
+  TrafficParticipantNumber: "trafficParticipantNumber",
 
   ParentFullName: "parentFullName",
 

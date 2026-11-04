@@ -1,13 +1,14 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 6.3.3 effective-5.10 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)
-// swift-module-flags: -target arm64-apple-ios15.0-simulator -enable-objc-interop -enable-library-evolution -enforce-exclusivity=checked -Osize -enable-experimental-feature AccessLevelOnImport -enable-bare-slash-regex -module-name BlinkID
-// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=swift-6 -interface-compiler-version 6.3.3
+// swift-compiler-version: Apple Swift version 6.4 effective-5.10 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)
+// swift-module-flags: -target arm64-apple-ios15.0-simulator -enable-objc-interop -enable-library-evolution -language-mode 5 -Osize -enable-experimental-feature AccessLevelOnImport -enable-bare-slash-regex -module-name BlinkID
+// swift-module-flags-ignorable: -no-verify-emitted-module-interface -formal-cxx-interoperability-mode=swift-6 -interface-compiler-version 6.4
 import AVFoundation
 @_exported import BlinkID
 import CoreData
 import CoreMedia
 import CryptoKit
 import Foundation
+import MetricKit
 import Network
 import Swift
 import UIKit
@@ -174,6 +175,90 @@ public struct FrameProcessResult : Swift.Sendable {
   public let processResult: BlinkID.BlinkIDSDK.ProcessResult?
   public let sessionError: BlinkID.SessionError?
 }
+public enum DocumentScenario : Swift.Sendable, Swift.CaseIterable {
+  case general
+  case mrzMandatory
+  case mrzOnly
+  case barcodeOnly
+  public static func == (a: BlinkID.DocumentScenario, b: BlinkID.DocumentScenario) -> Swift.Bool
+  public typealias AllCases = [BlinkID.DocumentScenario]
+  nonisolated public static var allCases: [BlinkID.DocumentScenario] {
+    get
+  }
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public enum VideoQualityProfile : Swift.Sendable, Swift.CaseIterable {
+  case balanced
+  case highSpeed
+  case highAccuracy
+  case permissive
+  public static func == (a: BlinkID.VideoQualityProfile, b: BlinkID.VideoQualityProfile) -> Swift.Bool
+  public typealias AllCases = [BlinkID.VideoQualityProfile]
+  nonisolated public static var allCases: [BlinkID.VideoQualityProfile] {
+    get
+  }
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public enum VideoCaptureEnvironment : Swift.Sendable, Swift.CaseIterable {
+  case handHeld
+  case stationary
+  public static func == (a: BlinkID.VideoCaptureEnvironment, b: BlinkID.VideoCaptureEnvironment) -> Swift.Bool
+  public typealias AllCases = [BlinkID.VideoCaptureEnvironment]
+  nonisolated public static var allCases: [BlinkID.VideoCaptureEnvironment] {
+    get
+  }
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public struct DocumentVideoUseCase : Swift.Sendable, Swift.Equatable, Swift.Hashable {
+  public var scenario: BlinkID.DocumentScenario
+  public var quality: BlinkID.VideoQualityProfile
+  public var captureEnvironment: BlinkID.VideoCaptureEnvironment
+  public init(scenario: BlinkID.DocumentScenario = .general, quality: BlinkID.VideoQualityProfile = .balanced, captureEnvironment: BlinkID.VideoCaptureEnvironment = .handHeld)
+  public static func == (a: BlinkID.DocumentVideoUseCase, b: BlinkID.DocumentVideoUseCase) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public enum PhotoQualityProfile : Swift.Sendable, Swift.CaseIterable {
+  case balanced
+  case highAccuracy
+  case permissive
+  public static func == (a: BlinkID.PhotoQualityProfile, b: BlinkID.PhotoQualityProfile) -> Swift.Bool
+  public typealias AllCases = [BlinkID.PhotoQualityProfile]
+  nonisolated public static var allCases: [BlinkID.PhotoQualityProfile] {
+    get
+  }
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public struct DocumentPhotoUseCase : Swift.Sendable, Swift.Equatable, Swift.Hashable {
+  public var scenario: BlinkID.DocumentScenario
+  public var quality: BlinkID.PhotoQualityProfile
+  public init(scenario: BlinkID.DocumentScenario = .general, quality: BlinkID.PhotoQualityProfile = .balanced)
+  public static func == (a: BlinkID.DocumentPhotoUseCase, b: BlinkID.DocumentPhotoUseCase) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension BlinkID.BlinkIDSessionSettings {
+  public static func documentVideo(_ useCase: BlinkID.DocumentVideoUseCase = DocumentVideoUseCase()) -> BlinkID.BlinkIDSessionSettings
+  public static func documentPhoto(_ useCase: BlinkID.DocumentPhotoUseCase = DocumentPhotoUseCase()) -> BlinkID.BlinkIDSessionSettings
+  public static func standaloneBarcode() -> BlinkID.BlinkIDSessionSettings
+  public static func verifyCapture() -> BlinkID.BlinkIDSessionSettings
+}
 @_hasMissingDesignatedInitializers final public class BlinkIDSession : Swift.Sendable {
   final public let settings: BlinkID.BlinkIDSessionSettings
   @objc deinit
@@ -232,6 +317,9 @@ public struct BlinkIDScanningResult : Swift.Sendable {
   public let countryCode: BlinkID.BlinkIDSDK.StringResult?
   public let nationalInsuranceNumber: BlinkID.BlinkIDSDK.StringResult?
   public let ethnicity: BlinkID.BlinkIDSDK.StringResult?
+  public let vehicleNumber: BlinkID.BlinkIDSDK.StringResult?
+  public let passportNumber: BlinkID.BlinkIDSDK.StringResult?
+  public let trafficParticipantNumber: BlinkID.BlinkIDSDK.StringResult?
   public let localityCode: BlinkID.BlinkIDSDK.StringResult?
   public let maidenName: BlinkID.BlinkIDSDK.StringResult?
   public let municipalityCode: BlinkID.BlinkIDSDK.StringResult?
@@ -333,6 +421,7 @@ public struct DocumentNumberRedactionSettings : Swift.Sendable {
   public var suffixDigitsVisible: Swift.UInt8
   public init(prefixDigitsVisible: Swift.UInt8 = 0, suffixDigitsVisible: Swift.UInt8 = 0)
 }
+
 public protocol RedactionSettingsResolver : Swift.Sendable {
   func resolveRedactionSettings(classInfo: BlinkID.BlinkIDSDK.DocumentClassInfo) -> BlinkID.RedactionSettings?
 }
@@ -461,12 +550,14 @@ public struct DependentInfo : Swift.Sendable {
   public let documentNumber: BlinkID.BlinkIDSDK.StringResult?
   public let fullName: BlinkID.BlinkIDSDK.StringResult?
 }
+
 public struct VehicleClassInfo<StringType> : Swift.Sendable where StringType : Swift.Sendable {
   public let vehicleClass: StringType?
   public let licenceType: StringType?
   public let effectiveDate: BlinkID.DateResult<StringType>?
   public let expiryDate: BlinkID.DateResult<StringType>?
 }
+
 public struct DriverLicenseDetailedInfo<StringType> : Swift.Sendable where StringType : Swift.Sendable {
   public let restrictions: StringType?
   public let endorsements: StringType?
@@ -498,6 +589,7 @@ public struct RectangleF : Swift.Sendable {
   public let width: Swift.Float
   public let height: Swift.Float
 }
+
 public struct DateResult<StringType> : Swift.Sendable where StringType : Swift.Sendable {
   public let day: Swift.Int?
   public let month: Swift.Int?
@@ -513,6 +605,7 @@ public struct ParentInfo : Swift.Sendable {
   public var lastName: BlinkID.BlinkIDSDK.StringResult?
   public var fullName: BlinkID.BlinkIDSDK.StringResult?
 }
+
 public protocol InputImageResultProtocol : Swift.Sendable {
   var rawData: Foundation.Data { get }
   var uiImage: UIKit.UIImage? { get }
@@ -621,6 +714,9 @@ public struct VIZResult : Swift.Sendable {
   public let socialSecurityStatus: BlinkID.BlinkIDSDK.StringResult?
   public let workRestriction: BlinkID.BlinkIDSDK.StringResult?
   public let ethnicity: BlinkID.BlinkIDSDK.StringResult?
+  public let vehicleNumber: BlinkID.BlinkIDSDK.StringResult?
+  public let passportNumber: BlinkID.BlinkIDSDK.StringResult?
+  public let trafficParticipantNumber: BlinkID.BlinkIDSDK.StringResult?
 }
 public struct MRZResult : Swift.Sendable {
   public let rawMRZString: Swift.String
@@ -1034,6 +1130,9 @@ extension BlinkID.BlinkIDSDK {
     public let vehicleOwner: BlinkID.BlinkIDSDK.StringResultCompleteness?
     public let vehicleType: BlinkID.BlinkIDSDK.StringResultCompleteness?
     public let workRestriction: BlinkID.BlinkIDSDK.StringResultCompleteness?
+    public let vehicleNumber: BlinkID.BlinkIDSDK.StringResultCompleteness?
+    public let passportNumber: BlinkID.BlinkIDSDK.StringResultCompleteness?
+    public let trafficParticipantNumber: BlinkID.BlinkIDSDK.StringResultCompleteness?
     public let localizedName: BlinkID.BlinkIDSDK.StringResultCompleteness?
   }
 }
@@ -1286,7 +1385,7 @@ public enum CountryID : Swift.String, Swift.Decodable, Swift.Sendable, Swift.Cas
   case uzbekistan
   case vanuatu
   case vaticanCity
-  case virginIslandsBritish
+  case britishVirginIslands
   case virginIslandsOfTheUnitedStates
   case wallisAndFutuna
   case westernSahara
@@ -1457,6 +1556,7 @@ public enum RegionID : Swift.String, Swift.Decodable, Swift.Sendable, Swift.Case
   case tocantins
   case odisha
   case uttarakhand
+  case northernIreland
   public init(from decoder: any Swift.Decoder) throws
   public init?(rawValue: Swift.String)
   public typealias AllCases = [BlinkID.RegionID]
@@ -1560,6 +1660,10 @@ public enum DocumentTypeID : Swift.String, Swift.Decodable, Swift.Sendable, Swif
   case gendarmerieId
   case policeId
   case originCard
+  case specifiedResidenceCard
+  case goldenCard
+  case vehicleOwnershipCertificate
+  case byidCard
   public init(from decoder: any Swift.Decoder) throws
   public init?(rawValue: Swift.String)
   public typealias AllCases = [BlinkID.DocumentTypeID]
@@ -1646,6 +1750,9 @@ public enum FieldType : Swift.String, Swift.Decodable, Swift.Sendable, Swift.Cas
   case cardAccessNumber
   case parentFullName
   case ethnicity
+  case vehicleNumber
+  case passportNumber
+  case trafficParticipantNumber
   public init(from decoder: any Swift.Decoder) throws
   public init?(rawValue: Swift.String)
   public typealias AllCases = [BlinkID.FieldType]
@@ -1654,6 +1761,18 @@ public enum FieldType : Swift.String, Swift.Decodable, Swift.Sendable, Swift.Cas
     get
   }
   public var rawValue: Swift.String {
+    get
+  }
+}
+public enum InputImageCropAnalysis : Swift.Int, Swift.Decodable, Swift.Sendable {
+  case notCropped
+  case cropped
+  case notAvailable
+  case undetermined
+  public init(from decoder: any Swift.Decoder) throws
+  public init?(rawValue: Swift.Int)
+  public typealias RawValue = Swift.Int
+  public var rawValue: Swift.Int {
     get
   }
 }
@@ -1672,6 +1791,18 @@ public enum DocumentOrientation : Swift.Int, Swift.Decodable, Swift.Sendable {
   case horizontal
   case vertical
   case notAvailable
+  public init(from decoder: any Swift.Decoder) throws
+  public init?(rawValue: Swift.Int)
+  public typealias RawValue = Swift.Int
+  public var rawValue: Swift.Int {
+    get
+  }
+}
+public enum VizExtractionType : Swift.Int, Swift.Decodable, Swift.Sendable {
+  case notAvailable
+  case segmentation
+  case templating
+  case unsupported
   public init(from decoder: any Swift.Decoder) throws
   public init?(rawValue: Swift.Int)
   public typealias RawValue = Swift.Int
@@ -1726,36 +1857,17 @@ public enum ProcessingStatus : Swift.String, Swift.Decodable, Swift.Sendable {
     get
   }
 }
-@_hasMissingDesignatedInitializers final public class CrashMonitor : @unchecked Swift.Sendable {
+@objc @_inheritsConvenienceInitializers @_hasMissingDesignatedInitializers final public class CrashMonitor : ObjectiveC.NSObject, @unchecked Swift.Sendable {
   public static let shared: BlinkID.CrashMonitor
-  @objc deinit
   final public func startMonitoring(enableDebugLogging: Swift.Bool = false)
   final public func stopMonitoring()
-  final public func simulateCrash(type crashType: BlinkID.CrashMonitor.TestCrashType)
-  final public func debugWriteTestMarker()
-  final public func debugProcessTestMarker()
-  public enum TestCrashType : Swift.CaseIterable {
-    case exception
-    case segmentationFault
-    case arrayOutOfBounds
-    case nilPointerDereference
-    case abort
-    public var description: Swift.String {
-      get
-    }
-    public static func == (a: BlinkID.CrashMonitor.TestCrashType, b: BlinkID.CrashMonitor.TestCrashType) -> Swift.Bool
-    public typealias AllCases = [BlinkID.CrashMonitor.TestCrashType]
-    nonisolated public static var allCases: [BlinkID.CrashMonitor.TestCrashType] {
-      get
-    }
-    public func hash(into hasher: inout Swift.Hasher)
-    public var hashValue: Swift.Int {
-      get
-    }
-  }
-  final public func testCrashReporting(type crashType: BlinkID.CrashMonitor.TestCrashType)
-  final public func testCrashReportingSync(type crashType: BlinkID.CrashMonitor.TestCrashType)
-  final public func verifyPingManagerIntegration()
+  final public func sessionDidBegin(sessionNumber: Swift.Int)
+  final public func sessionDidEnd()
+  @objc deinit
+}
+extension BlinkID.CrashMonitor : MetricKit.MXMetricManagerSubscriber {
+  @objc final public func didReceive(_ payloads: [MetricKit.MXDiagnosticPayload])
+  @objc final public func didReceive(_ payloads: [MetricKit.MXMetricPayload])
 }
 public struct InvalidLicenseKeyError : Swift.Error {
   public let message: Swift.String
@@ -1864,6 +1976,7 @@ final public class InputImage : Swift.Sendable {
   @_Concurrency.MainActor public static let shared: BlinkID.UXLicenseProviderBridge
   @objc deinit
 }
+
 public protocol OtaSdkSettings : Swift.Sendable {
   var otaResourcesConfiguration: BlinkID.OTAResourcesConfig { get set }
 }
@@ -1876,11 +1989,11 @@ public struct OTAResourcesConfig : Swift.Sendable {
   @discardableResult
   public func sendPinglets() async -> BlinkID.PingStatus
   @objc deinit
-  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
   @_semantics("defaultActor") nonisolated final public var unownedExecutor: _Concurrency.UnownedSerialExecutor {
     get
   }
 }
+
 public protocol Pinglet : Swift.Decodable, Swift.Encodable {
   static var schemaName: Swift.String { get }
   static var schemaVersion: Swift.String { get }
@@ -1930,18 +2043,6 @@ public enum ImageAnalysisDetectionStatus : Swift.Int, Swift.Decodable, Swift.Sen
     get
   }
 }
-public enum InputImageCropAnalysis : Swift.Int, Swift.Decodable, Swift.Sendable {
-  case notCropped
-  case cropped
-  case notAvailable
-  case undetermined
-  public init(from decoder: any Swift.Decoder) throws
-  public init?(rawValue: Swift.Int)
-  public typealias RawValue = Swift.Int
-  public var rawValue: Swift.Int {
-    get
-  }
-}
 public struct Point : Swift.Sendable {
   public let x: Swift.Int32
   public let y: Swift.Int32
@@ -1965,27 +2066,15 @@ public enum ScanningSide : Swift.Int, Swift.Sendable, Swift.CaseIterable {
     get
   }
 }
-public enum VizExtractionType : Swift.Int, Swift.Decodable, Swift.Sendable {
-  case notAvailable
-  case segmentation
-  case templating
-  case unsupported
-  public init(from decoder: any Swift.Decoder) throws
-  public init?(rawValue: Swift.Int)
-  public typealias RawValue = Swift.Int
-  public var rawValue: Swift.Int {
-    get
-  }
-}
 @_hasMissingDesignatedInitializers @globalActor public actor ProcessingActor {
   public static let shared: BlinkID.ProcessingActor
   public typealias ActorType = BlinkID.ProcessingActor
   @objc deinit
-  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, *)
   @_semantics("defaultActor") nonisolated final public var unownedExecutor: _Concurrency.UnownedSerialExecutor {
     get
   }
 }
+
 public protocol SdkSettings : Swift.Sendable {
   var licenseKey: Swift.String { get set }
   var licensee: Swift.String? { get set }
@@ -2022,7 +2111,9 @@ public struct UxEventPinglet : BlinkID.Pinglet {
   public let errorMessageType: BlinkID.UxEventPinglet.ErrorMessageType?
   public let alertType: BlinkID.UxEventPinglet.AlertType?
   public let helpCloseType: BlinkID.UxEventPinglet.HelpCloseType?
-  public init(eventType: BlinkID.UxEventPinglet.EventType, errorMessageType: BlinkID.UxEventPinglet.ErrorMessageType? = nil, alertType: BlinkID.UxEventPinglet.AlertType? = nil, helpCloseType: BlinkID.UxEventPinglet.HelpCloseType? = nil)
+  public let cameraFailureCategory: Swift.String?
+  public let closeReason: BlinkID.UxEventPinglet.CloseReason?
+  public init(eventType: BlinkID.UxEventPinglet.EventType, errorMessageType: BlinkID.UxEventPinglet.ErrorMessageType? = nil, alertType: BlinkID.UxEventPinglet.AlertType? = nil, helpCloseType: BlinkID.UxEventPinglet.HelpCloseType? = nil, cameraFailureCategory: Swift.String? = nil, closeReason: BlinkID.UxEventPinglet.CloseReason? = nil)
   public enum EventType : Swift.String, Swift.Codable, Swift.CaseIterable, Swift.Sendable {
     case camerastarted
     case cameraclosed
@@ -2037,6 +2128,8 @@ public struct UxEventPinglet : BlinkID.Pinglet {
     case appmovedtobackground
     case inactivitytimeout
     case unsupportedbarcodetimeout
+    case cameraopenfailed
+    case facecapturescreendisplayed
     public init?(rawValue: Swift.String)
     public typealias AllCases = [BlinkID.UxEventPinglet.EventType]
     public typealias RawValue = Swift.String
@@ -2093,6 +2186,20 @@ public struct UxEventPinglet : BlinkID.Pinglet {
     public typealias AllCases = [BlinkID.UxEventPinglet.HelpCloseType]
     public typealias RawValue = Swift.String
     nonisolated public static var allCases: [BlinkID.UxEventPinglet.HelpCloseType] {
+      get
+    }
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+  public enum CloseReason : Swift.String, Swift.Codable, Swift.CaseIterable, Swift.Sendable {
+    case user
+    case sdk
+    case systemerror
+    public init?(rawValue: Swift.String)
+    public typealias AllCases = [BlinkID.UxEventPinglet.CloseReason]
+    public typealias RawValue = Swift.String
+    nonisolated public static var allCases: [BlinkID.UxEventPinglet.CloseReason] {
       get
     }
     public var rawValue: Swift.String {
@@ -2174,15 +2281,14 @@ public struct SdkInitStartPinglet : BlinkID.Pinglet {
     }
   }
   public enum PlatformDetails : Swift.String, Swift.Codable, Swift.CaseIterable, Swift.Sendable {
-    case basic
-    case advanced
-    case advancedThreads
-    case fullBasic
-    case fullAdvanced
-    case fullAdvancedThreads
-    case lightweightBasic
-    case lightweightAdvanced
-    case lightweightAdvancedThreads
+    case simd
+    case simdThreads
+    case simdRelaxed
+    case simdRelaxedThreads
+    case lightweightSimd
+    case lightweightSimdThreads
+    case lightweightSimdRelaxed
+    case lightweightSimdRelaxedThreads
     public init?(rawValue: Swift.String)
     public typealias AllCases = [BlinkID.SdkInitStartPinglet.PlatformDetails]
     public typealias RawValue = Swift.String
@@ -2476,6 +2582,35 @@ public struct BrowserDeviceInfoPinglet : BlinkID.Pinglet {
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
+public struct UploadPinglet : BlinkID.Pinglet {
+  public static let schemaName: Swift.String
+  public static let schemaVersion: Swift.String
+  public let sessionId: Swift.String
+  public let eventType: BlinkID.UploadPinglet.EventType
+  public let durationMs: Swift.Double?
+  public let payloadBytes: Swift.Int64?
+  public let errorCategory: Swift.String?
+  public let retryCount: Swift.Int64?
+  public init(sessionId: Swift.String, eventType: BlinkID.UploadPinglet.EventType, durationMs: Swift.Double? = nil, payloadBytes: Swift.Int64? = nil, errorCategory: Swift.String? = nil, retryCount: Swift.Int64? = nil)
+  public enum EventType : Swift.String, Swift.Codable, Swift.CaseIterable, Swift.Sendable {
+    case initialized
+    case completed
+    case failed
+    case retryinitialized
+    case cancelled
+    public init?(rawValue: Swift.String)
+    public typealias AllCases = [BlinkID.UploadPinglet.EventType]
+    public typealias RawValue = Swift.String
+    nonisolated public static var allCases: [BlinkID.UploadPinglet.EventType] {
+      get
+    }
+    public var rawValue: Swift.String {
+      get
+    }
+  }
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
 public struct CameraInputInfoPinglet : BlinkID.Pinglet {
   public static let schemaName: Swift.String
   public static let schemaVersion: Swift.String
@@ -2512,6 +2647,14 @@ extension BlinkID.ImageExtractionType : Swift.Equatable {}
 extension BlinkID.ImageExtractionType : Swift.Hashable {}
 extension BlinkID.SessionError : Swift.Equatable {}
 extension BlinkID.SessionError : Swift.Hashable {}
+extension BlinkID.DocumentScenario : Swift.Equatable {}
+extension BlinkID.DocumentScenario : Swift.Hashable {}
+extension BlinkID.VideoQualityProfile : Swift.Equatable {}
+extension BlinkID.VideoQualityProfile : Swift.Hashable {}
+extension BlinkID.VideoCaptureEnvironment : Swift.Equatable {}
+extension BlinkID.VideoCaptureEnvironment : Swift.Hashable {}
+extension BlinkID.PhotoQualityProfile : Swift.Equatable {}
+extension BlinkID.PhotoQualityProfile : Swift.Hashable {}
 extension BlinkID.InputImageSource : Swift.Equatable {}
 extension BlinkID.InputImageSource : Swift.Hashable {}
 extension BlinkID.ScanningMode : Swift.Equatable {}
@@ -2553,20 +2696,24 @@ extension BlinkID.RegionID : Swift.RawRepresentable {}
 extension BlinkID.DocumentTypeID : Swift.Equatable {}
 extension BlinkID.DocumentTypeID : Swift.Hashable {}
 extension BlinkID.DocumentTypeID : Swift.RawRepresentable {}
+extension BlinkID.InputImageCropAnalysis : Swift.Equatable {}
+extension BlinkID.InputImageCropAnalysis : Swift.Hashable {}
+extension BlinkID.InputImageCropAnalysis : Swift.RawRepresentable {}
 extension BlinkID.DocumentImageColorStatus : Swift.Equatable {}
 extension BlinkID.DocumentImageColorStatus : Swift.Hashable {}
 extension BlinkID.DocumentImageColorStatus : Swift.RawRepresentable {}
 extension BlinkID.DocumentOrientation : Swift.Equatable {}
 extension BlinkID.DocumentOrientation : Swift.Hashable {}
 extension BlinkID.DocumentOrientation : Swift.RawRepresentable {}
+extension BlinkID.VizExtractionType : Swift.Equatable {}
+extension BlinkID.VizExtractionType : Swift.Hashable {}
+extension BlinkID.VizExtractionType : Swift.RawRepresentable {}
 extension BlinkID.RedactionMode : Swift.Equatable {}
 extension BlinkID.RedactionMode : Swift.Hashable {}
 extension BlinkID.RedactionMode : Swift.RawRepresentable {}
 extension BlinkID.ProcessingStatus : Swift.Equatable {}
 extension BlinkID.ProcessingStatus : Swift.Hashable {}
 extension BlinkID.ProcessingStatus : Swift.RawRepresentable {}
-extension BlinkID.CrashMonitor.TestCrashType : Swift.Equatable {}
-extension BlinkID.CrashMonitor.TestCrashType : Swift.Hashable {}
 extension BlinkID.ModelLoadError : Swift.Equatable {}
 extension BlinkID.ModelLoadError : Swift.Hashable {}
 extension BlinkID.ImageOrientation : Swift.Equatable {}
@@ -2583,15 +2730,9 @@ extension BlinkID.DocumentRotation : Swift.RawRepresentable {}
 extension BlinkID.ImageAnalysisDetectionStatus : Swift.Equatable {}
 extension BlinkID.ImageAnalysisDetectionStatus : Swift.Hashable {}
 extension BlinkID.ImageAnalysisDetectionStatus : Swift.RawRepresentable {}
-extension BlinkID.InputImageCropAnalysis : Swift.Equatable {}
-extension BlinkID.InputImageCropAnalysis : Swift.Hashable {}
-extension BlinkID.InputImageCropAnalysis : Swift.RawRepresentable {}
 extension BlinkID.ScanningSide : Swift.Equatable {}
 extension BlinkID.ScanningSide : Swift.Hashable {}
 extension BlinkID.ScanningSide : Swift.RawRepresentable {}
-extension BlinkID.VizExtractionType : Swift.Equatable {}
-extension BlinkID.VizExtractionType : Swift.Hashable {}
-extension BlinkID.VizExtractionType : Swift.RawRepresentable {}
 extension BlinkID.ProcessingActor : _Concurrency.GlobalActor {}
 extension BlinkID.UxEventPinglet.EventType : Swift.Equatable {}
 extension BlinkID.UxEventPinglet.EventType : Swift.Hashable {}
@@ -2605,6 +2746,9 @@ extension BlinkID.UxEventPinglet.AlertType : Swift.RawRepresentable {}
 extension BlinkID.UxEventPinglet.HelpCloseType : Swift.Equatable {}
 extension BlinkID.UxEventPinglet.HelpCloseType : Swift.Hashable {}
 extension BlinkID.UxEventPinglet.HelpCloseType : Swift.RawRepresentable {}
+extension BlinkID.UxEventPinglet.CloseReason : Swift.Equatable {}
+extension BlinkID.UxEventPinglet.CloseReason : Swift.Hashable {}
+extension BlinkID.UxEventPinglet.CloseReason : Swift.RawRepresentable {}
 extension BlinkID.WrapperProductInfoPinglet.WrapperProduct : Swift.Equatable {}
 extension BlinkID.WrapperProductInfoPinglet.WrapperProduct : Swift.Hashable {}
 extension BlinkID.WrapperProductInfoPinglet.WrapperProduct : Swift.RawRepresentable {}
@@ -2644,6 +2788,9 @@ extension BlinkID.BrowserDeviceInfoPinglet.UserAgentDataFormFactorsItem : Swift.
 extension BlinkID.BrowserDeviceInfoPinglet.DerivedDeviceInfoFormFactorsItem : Swift.Equatable {}
 extension BlinkID.BrowserDeviceInfoPinglet.DerivedDeviceInfoFormFactorsItem : Swift.Hashable {}
 extension BlinkID.BrowserDeviceInfoPinglet.DerivedDeviceInfoFormFactorsItem : Swift.RawRepresentable {}
+extension BlinkID.UploadPinglet.EventType : Swift.Equatable {}
+extension BlinkID.UploadPinglet.EventType : Swift.Hashable {}
+extension BlinkID.UploadPinglet.EventType : Swift.RawRepresentable {}
 extension BlinkID.CameraInputInfoPinglet.CameraFacing : Swift.Equatable {}
 extension BlinkID.CameraInputInfoPinglet.CameraFacing : Swift.Hashable {}
 extension BlinkID.CameraInputInfoPinglet.CameraFacing : Swift.RawRepresentable {}

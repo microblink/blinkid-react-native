@@ -170,6 +170,24 @@ export type BlinkIdScanningResult = {
   documentNumber?: StringResult;
 
   /**
+   * The vehicle number.
+   *
+   */
+  vehicleNumber?: StringResult;
+
+  /**
+   * The passport number.
+   *
+   */
+  passportNumber?: StringResult;
+
+  /**
+   * The traffic participant number.
+   *
+   */
+  trafficParticipantNumber?: StringResult;
+
+  /**
    *
    * The card access number.
    */

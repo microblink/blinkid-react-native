@@ -37,6 +37,12 @@ export class BlinkIdResultBuilder {
         result.additionalAddressInformation,
       ) +
       this.buildResult("Document number", result.documentNumber) +
+      this.buildResult("Vehicle number", result.vehicleNumber) +
+      this.buildResult("Passport number", result.passportNumber) +
+      this.buildResult(
+        "Traffic participant number",
+        result.trafficParticipantNumber,
+      ) +
       this.buildResult("Card access number", result.cardAccessNumber) +
       this.buildResult(
         "Additional document number",
@@ -191,6 +197,12 @@ export class BlinkIdResultBuilder {
       this.buildDateResult("Date of expiry", result.dateOfExpiry) +
       this.buildDateResult("Date of issue", result.dateOfIssue) +
       this.buildResult("Document number", result.documentNumber) +
+      this.buildResult("Vehicle number", result.vehicleNumber) +
+      this.buildResult("Passport number", result.passportNumber) +
+      this.buildResult(
+        "Traffic participant number",
+        result.trafficParticipantNumber,
+      ) +
       this.buildResult("Card access number", result.cardAccessNumber) +
       this.buildResult("Issuing authority", result.issuingAuthority) +
       this.buildResult("Document subtype", result.documentSubtype) +
@@ -452,5 +464,34 @@ export class BlinkIdResultBuilder {
     }
 
     return "";
+  }
+
+  /** Pretty-printed bridge payload; long base64 image fields are shortened for the UI. */
+  static formatRawJson(result: BlinkIdScanningResult): string {
+    const imageFieldKeys = new Set([
+      "firstDocumentImage",
+      "secondDocumentImage",
+      "firstInputImage",
+      "secondInputImage",
+      "barcodeImage",
+      "documentImage",
+      "inputImage",
+      "image",
+      "rawData",
+    ]);
+
+    return JSON.stringify(
+      result,
+      (key, value) => {
+        if (typeof value !== "string" || value.length <= 80) {
+          return value;
+        }
+        if (!imageFieldKeys.has(key)) {
+          return value;
+        }
+        return `<base64 omitted, ${value.length} characters>`;
+      },
+      2,
+    );
   }
 }

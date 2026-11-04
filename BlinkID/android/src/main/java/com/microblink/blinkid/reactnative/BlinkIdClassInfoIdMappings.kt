@@ -22,8 +22,10 @@ internal object BlinkIdClassInfoIdMappings {
   fun serializeRegionId(id: RegionId): String =
     id.name.replaceFirstChar { it.lowercase() }
 
-  fun parseDocumentTypeId(value: String): DocumentTypeId? =
-    DocumentTypeId.entries.find { serializeDocumentTypeId(it) == value }
+  fun parseDocumentTypeId(value: String): DocumentTypeId? {
+    val normalized = if (value == "byidCard") "byIdCard" else value
+    return DocumentTypeId.entries.find { serializeDocumentTypeId(it) == normalized }
+  }
 
   fun parseCountryId(value: String): CountryId? =
     CountryId.entries.find { serializeCountryId(it) == value }

@@ -3,7 +3,12 @@ import {
   DocumentTypeID,
   FieldType,
   RegionID,
+  SessionPreset,
   type BarcodeModuleSettings,
+  type DocumentScenario,
+  type PhotoQualityProfile,
+  type VideoCaptureEnvironment,
+  type VideoQualityProfile,
   type BlinkIdScanningUxSettings,
   type BlinkIdSessionSettings,
   type BlinkIdScanningSettings,
@@ -28,14 +33,60 @@ import {
 /** Default OTA service URL used by the native BlinkID SDK when omitted. */
 export const DEFAULT_OTA_SERVICE_URL = "https://blinkid-ota.microblink.com";
 
+/** Manual module tuning, or a native session preset factory (v8002+). */
+export type SessionPresetMode =
+  | "manual"
+  | (typeof SessionPreset)[keyof typeof SessionPreset];
+
+export const SESSION_PRESET_MODES: SessionPresetMode[] = [
+  "manual",
+  SessionPreset.DocumentVideo,
+  SessionPreset.DocumentPhoto,
+  SessionPreset.StandaloneBarcode,
+  SessionPreset.VerifyCapture,
+];
+
+export const DOCUMENT_SCENARIOS: DocumentScenario[] = [
+  "general",
+  "mrzMandatory",
+  "mrzOnly",
+  "barcodeOnly",
+];
+
+export const VIDEO_QUALITY_PROFILES: VideoQualityProfile[] = [
+  "balanced",
+  "highSpeed",
+  "highAccuracy",
+  "permissive",
+];
+
+export const PHOTO_QUALITY_PROFILES: PhotoQualityProfile[] = [
+  "balanced",
+  "highAccuracy",
+  "permissive",
+];
+
+export const VIDEO_CAPTURE_ENVIRONMENTS: VideoCaptureEnvironment[] = [
+  "handHeld",
+  "stationary",
+];
+
 /** UI-driven scanning configuration for the BlinkID sample app. */
 export class ScanningModulesConfig {
+  sessionPresetMode: SessionPresetMode = "manual";
+  documentScenario: DocumentScenario = "general";
+  videoQuality: VideoQualityProfile = "balanced";
+  photoQuality: PhotoQualityProfile = "balanced";
+  videoCaptureEnvironment: VideoCaptureEnvironment = "handHeld";
+
   scanningMode: ScanningMode = "automatic";
   /** Milliseconds before a scanning step times out. `0` disables the timeout (default: 60000). */
   stepTimeoutDuration = 60000;
   /** Milliseconds of UI inactivity before timeout. `0` disables the timeout (default: 10000). */
   inactivityTimeoutDuration = 10000;
   showOnboardingDialog = true;
+  allowScanSound = true;
+  passportOnly = false;
 
   barcodeEnabled = true;
   barcode: BarcodeModuleSettings =
@@ -206,13 +257,90 @@ export class ScanningModulesConfig {
     };
   }
 
+  /**
+   * Manual turns the four modules on with their defaults.
+   * Any other preset turns them off and clears stored edits, so the scan
+   * sends only the preset until a module is turned back on.
+   */
+  applySessionPresetMode(mode: SessionPresetMode): void {
+    this.sessionPresetMode = mode;
+    this.resetScanningModules(mode === "manual");
+  }
+
+  resetScanningModules(enabled: boolean): void {
+    this.barcodeEnabled = enabled;
+    this.barcode = ScanningModulesConfig.defaultBarcodeModule();
+    this.documentCaptureEnabled = enabled;
+    this.documentCapture = ScanningModulesConfig.defaultDocumentCaptureModule();
+    this.mrzEnabled = enabled;
+    this.mrz = ScanningModulesConfig.defaultMrzModule();
+    this.vizEnabled = enabled;
+    this.viz = ScanningModulesConfig.defaultVizModule();
+  }
+
+  moduleToggleSubtitle(enabled: boolean): string {
+    if (enabled) {
+      return "Enabled";
+    }
+    if (this.sessionPresetMode === "manual") {
+      return "Disabled (null)";
+    }
+    return "Not sent; the preset applies";
+  }
+
+  /**
+   * Enabled modules only. Disabled modules are omitted so a preset keeps them.
+   * Sending `null` would disable that module on the preset.
+   */
+  toPresetScanningSettings(): BlinkIdScanningSettings | undefined {
+    const settings: BlinkIdScanningSettings = {};
+    if (this.barcodeEnabled) {
+      settings.barcodeModule = { ...this.barcode };
+    }
+    if (this.documentCaptureEnabled) {
+      settings.documentCaptureModule = { ...this.documentCapture };
+    }
+    if (this.mrzEnabled) {
+      settings.mrzModule = { ...this.mrz };
+    }
+    if (this.vizEnabled) {
+      settings.vizModule = { ...this.viz };
+    }
+    return Object.keys(settings).length === 0 ? undefined : settings;
+  }
+
   toSessionSettings(): BlinkIdSessionSettings {
-    return {
-      scanningMode: this.scanningMode,
-      scanningSettings: this.toScanningSettings(),
+    const sessionSettings: BlinkIdSessionSettings = {
       stepTimeoutDuration: this.stepTimeoutDuration,
       inactivityTimeoutDuration: this.inactivityTimeoutDuration,
     };
+
+    if (this.sessionPresetMode === "manual") {
+      sessionSettings.scanningMode = this.scanningMode;
+      sessionSettings.scanningSettings = this.toScanningSettings();
+      return sessionSettings;
+    }
+
+    sessionSettings.sessionPreset = this.sessionPresetMode;
+    const scanningSettings = this.toPresetScanningSettings();
+    if (scanningSettings !== undefined) {
+      sessionSettings.scanningSettings = scanningSettings;
+    }
+
+    if (this.sessionPresetMode === SessionPreset.DocumentVideo) {
+      sessionSettings.documentVideoUseCase = {
+        scenario: this.documentScenario,
+        quality: this.videoQuality,
+        captureEnvironment: this.videoCaptureEnvironment,
+      };
+    } else if (this.sessionPresetMode === SessionPreset.DocumentPhoto) {
+      sessionSettings.documentPhotoUseCase = {
+        scenario: this.documentScenario,
+        quality: this.photoQuality,
+      };
+    }
+
+    return sessionSettings;
   }
 
   toUxSettings(): BlinkIdScanningUxSettings {
@@ -220,24 +348,25 @@ export class ScanningModulesConfig {
       showHelpButton: true,
       showOnboardingDialog: this.showOnboardingDialog,
       allowHapticFeedback: true,
+      allowScanSound: this.allowScanSound,
       preferredCamera: "back",
+      passportOnly: this.passportOnly,
     };
   }
 
   resetToDefaults(): void {
+    this.sessionPresetMode = "manual";
+    this.documentScenario = "general";
+    this.videoQuality = "balanced";
+    this.photoQuality = "balanced";
+    this.videoCaptureEnvironment = "handHeld";
     this.scanningMode = "automatic";
     this.stepTimeoutDuration = 60000;
     this.inactivityTimeoutDuration = 10000;
     this.showOnboardingDialog = true;
-    this.barcodeEnabled = true;
-    this.barcode = ScanningModulesConfig.defaultBarcodeModule();
-    this.documentCaptureEnabled = true;
-    this.documentCapture =
-      ScanningModulesConfig.defaultDocumentCaptureModule();
-    this.mrzEnabled = true;
-    this.mrz = ScanningModulesConfig.defaultMrzModule();
-    this.vizEnabled = true;
-    this.viz = ScanningModulesConfig.defaultVizModule();
+    this.allowScanSound = true;
+    this.passportOnly = false;
+    this.resetScanningModules(true);
 
     this.classFilterEnabled = false;
     this.classFilterInclude = [];

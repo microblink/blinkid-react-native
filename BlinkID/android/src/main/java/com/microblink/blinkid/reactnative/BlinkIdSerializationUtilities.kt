@@ -113,6 +113,15 @@ object BlinkIdSerializationUtilities {
         scanningResult?.documentNumber?.let {
             scanningResultJson.put("documentNumber", serializeStringResult(it))
         }
+        scanningResult?.vehicleNumber?.let {
+            scanningResultJson.put("vehicleNumber", serializeStringResult(it))
+        }
+        scanningResult?.passportNumber?.let {
+            scanningResultJson.put("passportNumber", serializeStringResult(it))
+        }
+        scanningResult?.trafficParticipantNumber?.let {
+            scanningResultJson.put("trafficParticipantNumber", serializeStringResult(it))
+        }
         scanningResult?.cardAccessNumber?.let {
             scanningResultJson.put("cardAccessNumber", serializeStringResult(it))
         }
@@ -693,6 +702,15 @@ object BlinkIdSerializationUtilities {
         }
         vizResult?.documentNumber?.let {
             vizResultJson.put("documentNumber", serializeStringResult(it))
+        }
+        vizResult?.vehicleNumber?.let {
+            vizResultJson.put("vehicleNumber", serializeStringResult(it))
+        }
+        vizResult?.passportNumber?.let {
+            vizResultJson.put("passportNumber", serializeStringResult(it))
+        }
+        vizResult?.trafficParticipantNumber?.let {
+            vizResultJson.put("trafficParticipantNumber", serializeStringResult(it))
         }
         vizResult?.cardAccessNumber?.let {
             vizResultJson.put("cardAccessNumber", serializeStringResult(it))

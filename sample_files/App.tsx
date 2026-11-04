@@ -34,6 +34,9 @@ export default function App() {
   const onConfigChanged = () => setConfigVersion((v) => v + 1);
 
   const [result, setResult] = useState<string>(INITIAL_RESULT_HINT);
+  const [rawScanResult, setRawScanResult] =
+    useState<BlinkIdScanningResult | null>(null);
+  const [rawJsonExpanded, setRawJsonExpanded] = useState(false);
   const [firstCroppedImage, setFirstCroppedImage] = useState<string>();
   const [secondCroppedImage, setSecondCroppedImage] = useState<string>();
   const [faceImage, setFaceImage] = useState<string>();
@@ -74,7 +77,12 @@ export default function App() {
         `inactivityTimeoutDuration: ${sessionSettings.inactivityTimeoutDuration}`,
     );
     console.log(
-      `[BlinkIdSample] showOnboardingDialog: ${modulesConfig.showOnboardingDialog}`,
+      `[BlinkIdSample] sessionPresetMode: ${modulesConfig.sessionPresetMode}`,
+    );
+    console.log(
+      `[BlinkIdSample] showOnboardingDialog: ${modulesConfig.showOnboardingDialog}, ` +
+        `allowScanSound: ${modulesConfig.allowScanSound}, ` +
+        `passportOnly: ${modulesConfig.passportOnly}`,
     );
     console.log(
       `[BlinkIdSample] modules enabled: ` +
@@ -120,17 +128,13 @@ export default function App() {
         redactionSettingsResolver: modulesConfig.toRedactionSettingsResolver(),
       })
         .then((scanResult: BlinkIdScanningResult) => {
-          resetImages();
-          setResult(BlinkIdResultBuilder.getIdResultString(scanResult));
-          setImages(scanResult);
+          applyScanResult(scanResult);
         })
         .catch((error) => {
-          setResult(`BlinkID scanning error: ${error}`);
-          resetImages();
+          applyScanError(error);
         });
     } catch (error) {
-      setResult(`BlinkID scanning error: ${error}`);
-      resetImages();
+      applyScanError(error);
     }
   };
 
@@ -168,17 +172,13 @@ export default function App() {
         redactionSettings: modulesConfig.toDirectApiRedactionSettings(),
       })
         .then((scanResult: BlinkIdScanningResult) => {
-          resetImages();
-          setResult(BlinkIdResultBuilder.getIdResultString(scanResult));
-          setImages(scanResult);
+          applyScanResult(scanResult);
         })
         .catch((error) => {
-          setResult(`BlinkID scanning error: ${error}`);
-          resetImages();
+          applyScanError(error);
         });
     } catch (error) {
-      setResult(`BlinkID scanning error: ${error}`);
-      resetImages();
+      applyScanError(error);
     }
   };
 
@@ -201,23 +201,21 @@ export default function App() {
         redactionSettings: modulesConfig.toDirectApiRedactionSettings(),
       })
         .then((scanResult: BlinkIdScanningResult) => {
-          resetImages();
-          setResult(BlinkIdResultBuilder.getIdResultString(scanResult));
-          setImages(scanResult);
+          applyScanResult(scanResult);
         })
         .catch((error) => {
-          setResult(`BlinkID scanning error: ${error}`);
-          resetImages();
+          applyScanError(error);
         });
     } catch (error) {
-      setResult(`BlinkID scanning error: ${error}`);
-      resetImages();
+      applyScanError(error);
     }
   };
 
   const handleRefreshLicenseLease = async () => {
     try {
       await refreshLicenseLease();
+      setRawScanResult(null);
+      setRawJsonExpanded(false);
       setResult("License lease refreshed");
     } catch (error) {
       setResult(`Error refreshing license lease: ${error}`);
@@ -246,6 +244,21 @@ export default function App() {
     setFirstInputImage(undefined);
     setSecondInputImage(undefined);
     setBarcodeImage(undefined);
+  }
+
+  function applyScanResult(scanResult: BlinkIdScanningResult) {
+    resetImages();
+    setResult(BlinkIdResultBuilder.getIdResultString(scanResult));
+    setRawScanResult(scanResult);
+    setRawJsonExpanded(false);
+    setImages(scanResult);
+  }
+
+  function applyScanError(error: unknown) {
+    setResult(`BlinkID scanning error: ${error}`);
+    setRawScanResult(null);
+    setRawJsonExpanded(false);
+    resetImages();
   }
 
   return (
@@ -299,6 +312,27 @@ export default function App() {
           </View>
 
           <Text style={styles.resultText}>{result}</Text>
+
+          {rawScanResult ? (
+            <View style={styles.rawJsonSection}>
+              <Pressable
+                onPress={() => setRawJsonExpanded((expanded) => !expanded)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: rawJsonExpanded }}
+              >
+                <Text style={styles.linkText}>
+                  {rawJsonExpanded
+                    ? "Hide raw JSON result"
+                    : "Show raw JSON result"}
+                </Text>
+              </Pressable>
+              {rawJsonExpanded ? (
+                <Text selectable style={styles.rawJsonText}>
+                  {BlinkIdResultBuilder.formatRawJson(rawScanResult)}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
 
           {firstCroppedImage ? (
             <DocumentImageContainer
@@ -384,7 +418,21 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 32 },
   buttonBlock: { marginBottom: 16 },
-  resultText: { fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  resultText: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  rawJsonSection: { marginBottom: 16 },
+  linkText: {
+    color: "#1565C0",
+    fontSize: 15,
+    marginBottom: 8,
+  },
+  rawJsonText: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+    backgroundColor: "#f5f5f5",
+    padding: 12,
+    borderRadius: 8,
+  },
   imageBlock: { alignItems: "center", marginBottom: 16 },
   imageLabel: { fontSize: 14, marginBottom: 8 },
   image: {
